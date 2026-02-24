@@ -3,12 +3,19 @@ import { C, crd } from '../../utils/constants';
 
 export default function HomeView({
     guideLoad, guide, roomsLoad, rooms,
-    setCurRoom, startMode, deleteRoom, setView
+    setCurRoom, startMode, deleteRoom, setView,
+    user, onLogout
 }) {
     return (
         <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Pretendard',-apple-system,sans-serif" }}>
             <div style={{ maxWidth: 560, margin: "0 auto", padding: "36px 20px" }}>
                 <div style={{ textAlign: "center", marginBottom: 28 }}>
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 12, color: C.g500, fontWeight: 600 }}>👤 {user?.username}</span>
+                            <button onClick={onLogout} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${C.g200}`, background: C.w, color: C.g400, fontSize: 11, cursor: "pointer", fontWeight: 500 }}>로그아웃</button>
+                        </div>
+                    </div>
                     <div style={{ fontSize: 32, fontWeight: 800, color: C.p }}>Lalasweet</div>
                     <div style={{ fontSize: 13, color: C.g400, marginTop: 4 }}>가치 기반 성과관리 파트너</div>
                     {!guideLoad && <div style={{ marginTop: 10, fontSize: 12, color: guide ? C.p : C.gold }}>{guide ? `📄 ${guide.name}` : "⚠️ 레벨 가이드 미등록"}</div>}
@@ -55,7 +62,7 @@ export default function HomeView({
                 <button onClick={() => setView("admin")} style={{ ...crd, width: "100%", padding: "14px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: `1px solid ${C.g200}` }}>
                     <span style={{ fontSize: 22 }}>⚙️</span><div><div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>관리자</div></div>
                 </button>
-                <div style={{ textAlign: "center", marginTop: 24, color: C.g300, fontSize: 11 }}>Powered by Gemini API · 7 Core Values</div>
+                <div style={{ textAlign: "center", marginTop: 24, color: C.g300, fontSize: 11 }}>Powered by Multi-AI · 7 Core Values</div>
             </div>
         </div>
     );

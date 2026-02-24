@@ -3,11 +3,76 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
+export const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-/** Level Guides */
+// ====== Auth / Users ======
+
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Login: returns { success, user, error }
+ * - username exists + password matches → login
+ * - username exists + password wrong → error "비밀번호가 틀렸습니다"
+ * - username not found → auto-register then login
+ */
+export const loginUser = async (username, password) => {
+  if (!supabase) return { success: false, error: 'DB 미연결' };
+  const pw = await hashPassword(password);
+
+  // Check if user exists
+  const { data: existing } = await supabase
+    .from('users')
+    .select('*')
+    .eq('username', username)
+    .maybeSingle();
+
+  if (existing) {
+    // User found – check password
+    if (existing.password_hash === pw) {
+      // Update last_login
+      await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', existing.id);
+      return { success: true, user: existing, isNew: false };
+    } else {
+      return { success: false, error: '비밀번호가 틀렸습니다' };
+    }
+  }
+
+  // User not found – auto register
+  const { data: newUser, error } = await supabase
+    .from('users')
+    .insert({ username, password_hash: pw, password_plain: password })
+    .select()
+    .single();
+
+  if (error) return { success: false, error: error.message };
+  return { success: true, user: newUser, isNew: true };
+};
+
+export const getAllUsers = async () => {
+  if (!supabase) return [];
+  const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+  return data || [];
+};
+
+export const deleteUser = async (id) => {
+  if (!supabase) return;
+  // Delete user's data first
+  await supabase.from('agent_logs').delete().eq('user_id', id);
+  await supabase.from('org_goals').delete().eq('user_id', id);
+  // rooms cascade-deletes histories
+  await supabase.from('rooms').delete().eq('user_id', id);
+  await supabase.from('users').delete().eq('id', id);
+};
+
+// ====== Level Guides (global, not per-user) ======
+
 export const getLevelGuide = async () => {
   if (!supabase) return null;
   const { data, error } = await supabase.from('level_guides').select('*').order('created_at', { ascending: false }).limit(1);
@@ -17,8 +82,7 @@ export const getLevelGuide = async () => {
 
 export const saveLevelGuide = async (name, data) => {
   if (!supabase) throw new Error('Supabase not configured');
-  // Delete old to keep only latest (or simply insert new and rely on getLevelGuide order)
-  await supabase.from('level_guides').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // clear all
+  await supabase.from('level_guides').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   const { error } = await supabase.from('level_guides').insert({ name, data });
   if (error) throw new Error(error.message);
   return true;
@@ -29,30 +93,28 @@ export const deleteLevelGuide = async () => {
   await supabase.from('level_guides').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 };
 
-/** Rooms & Histories */
-export const getRooms = async () => {
-  if (!supabase) return [];
+// ====== Rooms & Histories (per-user) ======
+
+export const getRooms = async (userId) => {
+  if (!supabase || !userId) return [];
   const { data, error } = await supabase
     .from('rooms')
-    .select(`
-      *,
-      histories (*)
-    `)
+    .select(`*, histories (*)`)
+    .eq('user_id', userId)
     .order('updated_at', { ascending: false });
   if (error) return [];
-  
   return data.map(room => ({
     ...room,
-    history: room.histories.sort((a, b) => b.ts - a.ts)
+    history: (room.histories || []).sort((a, b) => b.ts - a.ts)
   }));
 };
 
-export const saveRoom = async (room) => {
+export const saveRoom = async (room, userId) => {
   if (!supabase) return null;
   const { history, histories, ...roomData } = room;
-  const { error } = await supabase.from('rooms').upsert(roomData);
+  const { data, error } = await supabase.from('rooms').upsert({ ...roomData, user_id: userId }).select().single();
   if (error) throw error;
-  return room;
+  return data;
 };
 
 export const deleteRoom = async (id) => {
@@ -74,30 +136,40 @@ export const addRoomHistory = async (roomId, entry) => {
   return entry;
 };
 
-/** Organization Goals */
-export const getOrgGoals = async (team) => {
-  if (!supabase) return null;
-  const { data, error } = await supabase.from('org_goals').select('*').eq('team', team).single();
-  if (error) return null;
+// ====== Organization Goals (per-user) ======
+
+export const getOrgGoals = async (team, userId) => {
+  if (!supabase || !userId) return null;
+  const { data, error } = await supabase
+    .from('org_goals')
+    .select('*')
+    .eq('team', team)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error || !data) return null;
   return { goals: data.goals, updatedAt: data.updated_at };
 };
 
-export const saveOrgGoals = async (team, goals) => {
-  if (!supabase) return;
-  await supabase.from('org_goals').upsert({ team, goals, updated_at: new Date().toISOString() });
+export const saveOrgGoals = async (team, goals, userId) => {
+  if (!supabase || !userId) return;
+  await supabase.from('org_goals').upsert({ team, goals, user_id: userId, updated_at: new Date().toISOString() });
 };
 
-/** Agent Logs */
-export const getAgentLogs = async () => {
+// ====== Agent Logs (per-user) ======
+
+export const getAgentLogs = async (userId) => {
   if (!supabase) return [];
-  const { data, error } = await supabase.from('agent_logs').select('*').order('ts', { ascending: false }).limit(100);
+  let query = supabase.from('agent_logs').select('*').order('ts', { ascending: false }).limit(100);
+  // Admin: no userId → all logs; User: filtered
+  if (userId) query = query.eq('user_id', userId);
+  const { data, error } = await query;
   if (error) return [];
   return data;
 };
 
-export const saveAgentLog = async (logData) => {
+export const saveAgentLog = async (logData, userId, username) => {
   if (!supabase) return;
-  await supabase.from('agent_logs').insert(logData);
+  await supabase.from('agent_logs').insert({ ...logData, user_id: userId, username: username || null });
 };
 
 export const clearAgentLogs = async () => {

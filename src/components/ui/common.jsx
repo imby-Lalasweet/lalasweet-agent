@@ -1,5 +1,5 @@
 import React from 'react';
-import { C } from '../utils/constants';
+import { C } from '../../utils/constants';
 
 export function Md({ t }) {
     if (!t) return null;

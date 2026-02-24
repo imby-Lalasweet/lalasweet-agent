@@ -460,21 +460,9 @@ function App() {
             maxWidth: 300
           }}
         >
-          <optgroup label="🟠 Anthropic Claude">
-            {AI_MODELS.filter(m => m.provider === "anthropic").map(m => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </optgroup>
-          <optgroup label="🤖 OpenAI GPT">
-            {AI_MODELS.filter(m => m.provider === "openai").map(m => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </optgroup>
-          <optgroup label="✨ Google Gemini">
-            {AI_MODELS.filter(m => m.provider === "google").map(m => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </optgroup>
+          {AI_MODELS.map(m => (
+            <option key={m.id} value={m.id}>{m.icon} {m.label}</option>
+          ))}
         </select>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", maxWidth: 180, lineHeight: 1.3, fontWeight: 500 }}>{currentModel?.desc || ""}</span>
       </div>

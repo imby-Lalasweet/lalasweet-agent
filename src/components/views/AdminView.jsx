@@ -1,13 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { C, crd, inp, bS } from '../../utils/constants';
 import { Shell, Md } from '../ui/common';
+import { getAllUsers, deleteUser } from '../../services/supabase';
 
 export default function AdminView({
     adminAuth, setAdminAuth, apw, setApw, pwErr, setPwErr, loadLogs,
     guide, fileRef, deleteGuide, handleFile, err,
     adminTab, setAdminTab, logsLoad, logs, logDetail, setLogDetail,
-    logFilter, setLogFilter, clearLogs, goHome
+    logFilter, setLogFilter, clearLogs, goHome,
+    user
 }) {
+    const [users, setUsers] = useState([]);
+    const [usersLoad, setUsersLoad] = useState(false);
+
+    const loadUsers = async () => {
+        setUsersLoad(true);
+        try {
+            const arr = await getAllUsers();
+            setUsers(arr);
+        } catch (e) {
+            console.error("Load users error", e);
+        }
+        setUsersLoad(false);
+    };
+
+    const handleDeleteUser = async (id, username) => {
+        if (!window.confirm(`"${username}" 사용자를 삭제하시겠습니까?\n관련된 모든 데이터가 삭제됩니다.`)) return;
+        try {
+            await deleteUser(id);
+            setUsers(prev => prev.filter(u => u.id !== id));
+        } catch (e) {
+            console.error("Delete user error", e);
+        }
+    };
 
     if (!adminAuth) {
         return (
@@ -54,8 +79,8 @@ export default function AdminView({
             </div>
 
             <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
-                {[{ k: "guide", l: "📄 가이드" }, { k: "logs", l: "📊 로그" }].map(t => (
-                    <button key={t.k} onClick={() => { setAdminTab(t.k); if (t.k === "logs") loadLogs(); }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: adminTab === t.k ? C.p : C.g100, color: adminTab === t.k ? "#fff" : C.g500 }}>{t.l}</button>
+                {[{ k: "guide", l: "📄 가이드" }, { k: "logs", l: "📊 로그" }, { k: "users", l: "👥 사용자" }].map(t => (
+                    <button key={t.k} onClick={() => { setAdminTab(t.k); if (t.k === "logs") loadLogs(); if (t.k === "users") loadUsers(); }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: adminTab === t.k ? C.p : C.g100, color: adminTab === t.k ? "#fff" : C.g500 }}>{t.l}</button>
                 ))}
             </div>
 
@@ -104,6 +129,7 @@ export default function AdminView({
                                         <span style={{ fontSize: 11, color: C.g400 }}>{new Date(logDetail.ts).toLocaleString("ko-KR")}</span>
                                     </div>
                                     <div style={{ fontSize: 12, color: C.g600, marginTop: 4 }}>{logDetail.name} · {logDetail.team} · {logDetail.role} · {logDetail.level}</div>
+                                    {logDetail.username && <div style={{ fontSize: 11, color: C.p, marginTop: 4, fontWeight: 600 }}>작성자: {logDetail.username}</div>}
                                 </div>
                                 <div style={{ background: C.g50, borderRadius: 12, padding: 14, maxHeight: 350, overflowY: "auto", fontSize: 12.5 }}><Md t={logDetail.result} /></div>
                             </div>
@@ -120,7 +146,7 @@ export default function AdminView({
                                                 <button key={i} onClick={() => setLogDetail(l)} style={{ background: C.w, borderRadius: 10, border: `1px solid ${C.g200}`, padding: "12px 14px", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                     <div>
                                                         <div style={{ fontSize: 12, fontWeight: 600, color: C.g800 }}>{l.modeLabel || l.mode_label} — {l.name}</div>
-                                                        <div style={{ fontSize: 11, color: C.g400, marginTop: 2 }}>{l.team} · {l.role}</div>
+                                                        <div style={{ fontSize: 11, color: C.g400, marginTop: 2 }}>{l.team} · {l.role} {l.username && <span style={{ color: C.p, fontWeight: 600 }}>· 👤 {l.username}</span>}</div>
                                                     </div>
                                                     <div style={{ fontSize: 10, color: C.g400, textAlign: "right" }}>{new Date(l.ts).toLocaleDateString("ko-KR")}</div>
                                                 </button>
@@ -129,6 +155,37 @@ export default function AdminView({
                                     )}
                             </div>
                         )}
+                </div>
+            )}
+
+            {adminTab === "users" && (
+                <div>
+                    {usersLoad ? <div style={{ textAlign: "center", padding: 20, color: C.g400, fontSize: 13 }}>불러오는 중...</div>
+                        : users.length === 0 ? <div style={{ textAlign: "center", padding: 30, color: C.g400, fontSize: 13 }}>등록된 사용자 없음</div>
+                            : (
+                                <div>
+                                    <div style={{ fontSize: 12, color: C.g400, marginBottom: 10 }}>{users.length}명</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 500, overflowY: "auto" }}>
+                                        {users.map(u => (
+                                            <div key={u.id} style={{ background: C.w, borderRadius: 10, border: `1px solid ${C.g200}`, padding: "14px 16px" }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>👤 {u.username}</div>
+                                                        <div style={{ fontSize: 11, color: C.g400, marginTop: 4 }}>
+                                                            비밀번호: <span style={{ color: C.g600, fontWeight: 600, fontFamily: "monospace" }}>{u.password_plain || "(미저장)"}</span>
+                                                        </div>
+                                                        <div style={{ fontSize: 10, color: C.g300, marginTop: 4 }}>
+                                                            가입: {new Date(u.created_at).toLocaleDateString("ko-KR")}
+                                                            {u.last_login && <span> · 최근: {new Date(u.last_login).toLocaleDateString("ko-KR")}</span>}
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ background: "none", border: "none", color: C.g300, fontSize: 14, cursor: "pointer", padding: "4px 6px", flexShrink: 0 }}>🗑️</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                 </div>
             )}
         </Shell>
