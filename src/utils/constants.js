@@ -20,15 +20,15 @@ export const LEVELS = ["L1", "L2", "L3", "L4", "L5"];
 export const ML = { 1: "🚀 이니셔티브", 2: "📅 성과 1on1", 3: "📝 미팅노트", 4: "☕️ 라포 1on1" };
 
 export const AI_MODELS = [
-    // Google Gemini 3
-    { id: "gemini-3.0-flash", label: "Gemini 3 빠른 모드", desc: "빠르게 답변", provider: "google", icon: "✨" },
-    { id: "gemini-3.0-flash-thinking", label: "Gemini 3 사고 모드", desc: "복잡한 문제 해결", provider: "google", icon: "✨" },
-    { id: "gemini-3.1-pro", label: "Gemini 3 Pro", desc: "고급 수학 및 코딩", provider: "google", icon: "✨" },
-    // OpenAI GPT-5
-    { id: "gpt-5.2", label: "GPT-5", desc: "최신 GPT 모델", provider: "openai", icon: "🤖" },
     // Anthropic Claude
     { id: "claude-opus-4-20250514", label: "Opus 4.6", desc: "복잡한 작업에 가장 강력한 성능", provider: "anthropic", icon: "🟠" },
     { id: "claude-sonnet-4-20250514", label: "Sonnet 4.6", desc: "일상적인 작업에 가장 효율적", provider: "anthropic", icon: "🟠" },
+    // OpenAI GPT-5
+    { id: "gpt-5.2", label: "GPT-5", desc: "최신 GPT 모델", provider: "openai", icon: "🤖" },
+    // Google Gemini 3
+    { id: "gemini-3.1-pro", label: "Gemini 3.1 Pro", desc: "고급 수학 및 코딩", provider: "google", icon: "✨" },
+    { id: "gemini-3-flash", label: "Gemini 3 Flash", desc: "빠르게 답변", provider: "google", icon: "✨" },
+    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", desc: "복잡한 문제 해결", provider: "google", icon: "✨" },
 ];
 
 // Shared styles
