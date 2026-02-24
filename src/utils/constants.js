@@ -26,8 +26,8 @@ export const AI_MODELS = [
     // OpenAI GPT-5
     { id: "gpt-5.2", label: "GPT-5", desc: "최신 GPT 모델", provider: "openai", icon: "🤖" },
     // Google Gemini 3
-    { id: "gemini-3.1-pro", label: "Gemini 3.1 Pro", desc: "고급 수학 및 코딩", provider: "google", icon: "✨" },
-    { id: "gemini-3-flash", label: "Gemini 3 Flash", desc: "빠르게 답변", provider: "google", icon: "✨" },
+    { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", desc: "고급 수학 및 코딩", provider: "google", icon: "✨" },
+    { id: "gemini-3-flash-preview", label: "Gemini 3 Flash", desc: "빠르게 답변", provider: "google", icon: "✨" },
     { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", desc: "복잡한 문제 해결", provider: "google", icon: "✨" },
 ];
 
