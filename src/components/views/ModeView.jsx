@@ -241,6 +241,7 @@ export default function ModeView({
                                     : <span style={{ color: C.g600, fontSize: 12, whiteSpace: "pre-wrap" }}>{goals}</span>}
                             </div>
                         </div>
+
                         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                             <button onClick={() => setStep(3)} style={bS}>← 이전</button>
                             <button onClick={() => { setStep(5); if (goalsMode === "text") saveOrgGoals(f1.team, goals); gen1(); }} style={bP()}>🚀 생성</button>
@@ -277,6 +278,7 @@ export default function ModeView({
                             <div style={{ whiteSpace: "pre-wrap", color: C.g600 }}>{f2.initiatives}</div>
                             {f2.concern && (<><hr style={{ border: "none", borderTop: `1px solid ${C.g200}`, margin: "6px 0" }} /><div style={{ color: C.g400, fontSize: 11, fontWeight: 600 }}>리더 고민</div><div style={{ whiteSpace: "pre-wrap", color: C.g600 }}>{f2.concern}</div></>)}
                         </div>
+
                         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                             <button onClick={() => setStep(0)} style={bS}>← 이전</button>
                             <button onClick={() => { setStep(2); gen2(); }} style={bP()}>📅 생성</button>
