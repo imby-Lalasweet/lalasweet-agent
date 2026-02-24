@@ -48,7 +48,7 @@ function App() {
 
   const [modeId, setModeId] = useState(null);
   const [step, setStep] = useState(0);
-  const [selectedModel, setSelectedModel] = useState("claude-opus-4-20250514");
+  const [selectedModel, setSelectedModel] = useState("claude-sonnet-4-20250514");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
   const [modTxt, setModTxt] = useState("");
