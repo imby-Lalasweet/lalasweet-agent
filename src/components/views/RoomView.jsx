@@ -29,20 +29,22 @@ export default function RoomView({ curRoom, goHome, startMode }) {
             <div style={{ fontSize: 14, fontWeight: 700, color: C.g800, marginBottom: 10 }}>📋 히스토리 <span style={{ color: C.g400, fontWeight: 400, fontSize: 12 }}>({hist.length}건)</span></div>
 
             {hist.length === 0 ? <div style={{ textAlign: "center", padding: "24px 0", color: C.g400, fontSize: 13 }}>아직 생성된 기록이 없습니다</div>
-                : (<div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 400, overflowY: "auto" }}>
+                : (<div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto", paddingRight: 4 }}>
                     {hist.map((h, i) => (
-                        <div key={i} style={{ background: C.g50, borderRadius: 10, border: `1px solid ${C.g200}`, overflow: "hidden" }}>
-                            <button onClick={() => setExpandIdx(expandIdx === i ? null : i)} style={{ width: "100%", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <div>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: C.g800 }}>{h.mode_label || h.modeLabel}</div>
-                                    <div style={{ fontSize: 10, color: C.g400, marginTop: 2 }}>{new Date(h.ts).toLocaleString("ko-KR")}</div>
+                        <div key={i} style={{ background: C.g50, borderRadius: 10, border: `1px solid ${C.g200}`, overflow: "hidden", flexShrink: 0 }}>
+                            <div style={{ padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div onClick={() => setExpandIdx(expandIdx === i ? null : i)} style={{ flex: 1, cursor: "pointer" }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: C.g800 }}>{h.mode_label || h.modeLabel}</div>
+                                    <div style={{ fontSize: 11, color: C.g400, marginTop: 4 }}>{new Date(h.ts).toLocaleString("ko-KR")}</div>
                                 </div>
-                                <span style={{ color: C.g400, fontSize: 12 }}>{expandIdx === i ? "▲" : "▼"}</span>
-                            </button>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(h.result); alert("클립보드에 복사되었습니다."); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${C.g200}`, background: C.w, color: C.p, fontSize: 11, cursor: "pointer", fontWeight: 700 }}>📋 복사</button>
+                                    <button onClick={() => setExpandIdx(expandIdx === i ? null : i)} style={{ background: "none", border: "none", color: C.g400, fontSize: 12, cursor: "pointer" }}>{expandIdx === i ? "▲" : "▼"}</button>
+                                </div>
+                            </div>
                             {expandIdx === i && (
-                                <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${C.g200}` }}>
-                                    <div style={{ marginTop: 10, maxHeight: 300, overflowY: "auto", fontSize: 12.5 }}><Md t={h.result} /></div>
-                                    <button onClick={() => navigator.clipboard.writeText(h.result)} style={{ marginTop: 8, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.g200}`, background: C.w, color: C.p, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>📋 복사</button>
+                                <div style={{ padding: "14px", borderTop: `1px solid ${C.g200}`, background: C.w, fontSize: 13 }}>
+                                    <Md t={h.result} />
                                 </div>
                             )}
                         </div>
