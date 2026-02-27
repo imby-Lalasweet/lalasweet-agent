@@ -1,11 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { C, crd } from '../../utils/constants';
+import { changeUserPassword } from '../../services/supabase';
 
 export default function HomeView({
     guideLoad, guide, roomsLoad, rooms,
     setCurRoom, startMode, deleteRoom, setView,
     user, onLogout
 }) {
+    const handleChangePassword = async () => {
+        const newPw = window.prompt("새로운 비밀번호를 입력해주세요:");
+        if (!newPw) return;
+        if (newPw.length < 4) {
+            alert("비밀번호는 최소 4자리 이상이어야 합니다.");
+            return;
+        }
+
+        try {
+            const success = await changeUserPassword(user.id, newPw);
+            if (success) {
+                alert("비밀번호가 성공적으로 변경되었습니다.\n다음 로그인부터는 새 비밀번호를 사용해주세요!");
+            } else {
+                alert("비밀번호 변경에 실패했습니다.");
+            }
+        } catch (e) {
+            console.error("Password change error", e);
+            alert("오류가 발생했습니다: " + e.message);
+        }
+    };
+
     return (
         <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Pretendard',-apple-system,sans-serif" }}>
             <div style={{ maxWidth: 560, margin: "0 auto", padding: "36px 20px" }}>
@@ -13,6 +35,7 @@ export default function HomeView({
                     <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ fontSize: 12, color: C.g500, fontWeight: 600 }}>👤 {user?.username}</span>
+                            <button onClick={handleChangePassword} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${C.g200}`, background: C.w, color: C.g500, fontSize: 11, cursor: "pointer", fontWeight: 500 }}>비밀번호 변경</button>
                             <button onClick={onLogout} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${C.g200}`, background: C.w, color: C.g400, fontSize: 11, cursor: "pointer", fontWeight: 500 }}>로그아웃</button>
                         </div>
                     </div>

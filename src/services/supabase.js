@@ -71,6 +71,24 @@ export const deleteUser = async (id) => {
   await supabase.from('users').delete().eq('id', id);
 };
 
+export const resetUserPassword = async (id) => {
+  if (!supabase) return false;
+  const pw = await hashPassword('1234');
+  const { error } = await supabase.from('users')
+    .update({ password_hash: pw, password_plain: '1234' })
+    .eq('id', id);
+  return !error;
+};
+
+export const changeUserPassword = async (id, newPassword) => {
+  if (!supabase) return false;
+  const pw = await hashPassword(newPassword);
+  const { error } = await supabase.from('users')
+    .update({ password_hash: pw, password_plain: newPassword })
+    .eq('id', id);
+  return !error;
+};
+
 // ====== Level Guides (global, not per-user) ======
 
 export const getLevelGuide = async () => {
@@ -91,6 +109,28 @@ export const saveLevelGuide = async (name, data) => {
 export const deleteLevelGuide = async () => {
   if (!supabase) return;
   await supabase.from('level_guides').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+};
+
+// ====== Working Style (global, not per-user) ======
+
+export const getWorkingStyle = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('working_style').select('*').order('updated_at', { ascending: false }).limit(1);
+  if (error || !data.length) return null;
+  return data[0];
+};
+
+export const saveWorkingStyle = async (content) => {
+  if (!supabase) throw new Error('Supabase not configured');
+  await supabase.from('working_style').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  const { error } = await supabase.from('working_style').insert({ content, updated_at: new Date().toISOString() });
+  if (error) throw new Error(error.message);
+  return true;
+};
+
+export const deleteWorkingStyle = async () => {
+  if (!supabase) return;
+  await supabase.from('working_style').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 };
 
 // ====== Rooms & Histories (per-user) ======

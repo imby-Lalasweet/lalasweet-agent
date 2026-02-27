@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { C, ML, LEVELS, inp, lbl, bP, bS } from '../../utils/constants';
 import { Shell, Md, GS, CheckBtn, TabToggle } from '../ui/common';
 
 export default function ModeView({
-    modeId, curRoom, step, setStep, loading, err, result,
+    modeId, curRoom, rooms, step, setStep, loading, err, result,
     modTxt, setModTxt, handleModify, startMode, goHome, goRoom,
     guide,
     f1, setF1, hasExisting, setHasExisting, existingInit, setExistingInit, applyDirect,
@@ -15,6 +15,7 @@ export default function ModeView({
     f3, setF3, gen3,
     f4, setF4, gen4
 }) {
+    const [specificity, setSpecificity] = useState("100%");
     const backFn = curRoom ? goRoom : goHome;
     const backLbl = curRoom ? `${curRoom.name}` : "홈으로";
     const isResult1 = modeId === 1 && (step === 99 || step >= 5);
@@ -51,7 +52,26 @@ export default function ModeView({
                             <div style={{ marginTop: 16, background: C.g50, borderRadius: 12, padding: 14, border: `1px solid ${C.g200}` }}>
                                 <label style={{ display: "block", marginBottom: 8, color: C.g500, fontSize: 12, fontWeight: 600 }}>✏️ 수정 요청</label>
                                 <textarea style={{ ...inp, minHeight: 72, resize: "vertical", fontSize: 13 }} placeholder="예: Core 1 기준 구체화" value={modTxt} onChange={e => setModTxt(e.target.value)} />
-                                <button onClick={() => { if (modTxt.trim()) { handleModify(modTxt.trim()); setModTxt(""); } }} disabled={!modTxt.trim()} style={{ width: "100%", marginTop: 10, padding: "11px 0", borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: modTxt.trim() ? "pointer" : "not-allowed", background: modTxt.trim() ? C.p : C.g200, color: modTxt.trim() ? "#fff" : C.g400 }}>🔄 다시 만들기</button>
+
+                                <div style={{ marginTop: 14 }}>
+                                    <label style={{ display: "block", marginBottom: 8, color: C.g500, fontSize: 12, fontWeight: 600 }}>🔍 구체화 수준</label>
+                                    <div style={{ display: "flex", gap: 6 }}>
+                                        {["60%", "80%", "100%", "120%", "150%"].map(lvl => (
+                                            <button
+                                                key={lvl}
+                                                onClick={() => setSpecificity(lvl)}
+                                                style={{
+                                                    flex: 1, padding: "8px 0", borderRadius: 8, border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                                                    background: specificity === lvl ? C.p : C.g100,
+                                                    color: specificity === lvl ? "#fff" : C.g500
+                                                }}>
+                                                {lvl}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button onClick={() => { if (modTxt.trim()) { handleModify(modTxt.trim(), specificity); setModTxt(""); } }} disabled={!modTxt.trim()} style={{ width: "100%", marginTop: 14, padding: "11px 0", borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, cursor: modTxt.trim() ? "pointer" : "not-allowed", background: modTxt.trim() ? C.p : C.g200, color: modTxt.trim() ? "#fff" : C.g400 }}>🔄 다시 만들기</button>
                             </div>
                         )}
 
@@ -139,8 +159,59 @@ export default function ModeView({
                                 {LEVELS.map(l => (<button key={l} onClick={() => setF1(p => ({ ...p, level: l }))} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, background: f1.level === l ? C.p : C.g100, color: f1.level === l ? "#fff" : C.g500 }}>{l}</button>))}
                             </div>
                         </div>
-                        <div style={{ marginBottom: 10 }}><label style={lbl}>직무 *</label><input style={inp} placeholder="마케터, 개발자" value={f1.role} onChange={e => setF1(p => ({ ...p, role: e.target.value }))} /></div>
-                        <div style={{ marginBottom: 10 }}><label style={lbl}>리더 기대사항 *</label><textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} placeholder="이번 분기 기대 역할/성과" value={f1.expectation} onChange={e => setF1(p => ({ ...p, expectation: e.target.value }))} /></div>
+                        <div style={{ marginBottom: 10 }}>
+                            <label style={lbl}>직무 *</label>
+                            <input style={inp} placeholder="마케터, 개발자" value={f1.role} onChange={e => setF1(p => ({ ...p, role: e.target.value }))} />
+                        </div>
+                        <div style={{ marginBottom: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                <label style={{ ...lbl, marginBottom: 0 }}>리더 기대사항 (상세히 작성해주실 수록 좋은 이니셔티브가 생성돼요.) *</label>
+                            </div>
+                            <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} placeholder="이번 분기 기대 역할/성과" value={f1.expectation} onChange={e => setF1(p => ({ ...p, expectation: e.target.value }))} />
+
+                            {/* 최근 기대사항 표시 로직 */}
+                            {(() => {
+                                const allHistories = [...(rooms ? rooms.flatMap(r => r.history || []) : []), ...(curRoom && curRoom.history ? curRoom.history : [])];
+                                // mode 1 의 히스토리 중 expectation 값이 있는 것만 필터링 (최신순)
+                                const historyExpectations = allHistories
+                                    // sort by timestamp descending just to be sure
+                                    .filter(h => h && Number(h.mode) === 1)
+                                    .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+                                    .map(h => {
+                                        let i = h.info;
+                                        if (typeof i === 'string') { try { i = JSON.parse(i); } catch (e) { i = {}; } }
+                                        return i?.expectation;
+                                    })
+                                    .filter(Boolean);
+
+                                // 중복 제거 및 최근 3개만 추출
+                                const uniqueRecentExps = [...new Set(historyExpectations)].slice(0, 3);
+
+                                if (uniqueRecentExps.length === 0) return null;
+
+                                return (
+                                    <div style={{ marginTop: 8 }}>
+                                        <div style={{ fontSize: 11, color: C.g400, marginBottom: 6, fontWeight: 600 }}>💡 최근 작성했던 기대사항 (클릭하여 적용)</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            {uniqueRecentExps.map((exp, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setF1(p => ({ ...p, expectation: exp }))}
+                                                    style={{
+                                                        textAlign: 'left', padding: '8px 12px', borderRadius: 8,
+                                                        border: `1px solid ${C.g200}`, background: C.g50, color: C.g600,
+                                                        fontSize: 12, cursor: 'pointer', lineHeight: 1.4,
+                                                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                                                    }}
+                                                >
+                                                    {exp}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
                         <div>
                             <label style={lbl}>Pre-Level</label>
                             <div style={{ display: "flex", gap: 8 }}>

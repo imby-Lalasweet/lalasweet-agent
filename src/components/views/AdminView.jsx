@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { C, crd, inp, bS } from '../../utils/constants';
 import { Shell, Md } from '../ui/common';
-import { getAllUsers, deleteUser } from '../../services/supabase';
+import { getAllUsers, deleteUser, resetUserPassword } from '../../services/supabase';
 
 export default function AdminView({
     adminAuth, setAdminAuth, apw, setApw, pwErr, setPwErr, loadLogs,
     guide, fileRef, deleteGuide, handleFile, err,
     adminTab, setAdminTab, logsLoad, logs, logDetail, setLogDetail,
     logFilter, setLogFilter, clearLogs, goHome,
-    user
+    user,
+    workingStyle, saveWorkingStyle, deleteWorkingStyle
 }) {
     const [users, setUsers] = useState([]);
     const [usersLoad, setUsersLoad] = useState(false);
+    const [wsText, setWsText] = useState(workingStyle?.content || '');
+    const [wsSaving, setWsSaving] = useState(false);
+    const [wsMsg, setWsMsg] = useState('');
+
+    useEffect(() => {
+        setWsText(workingStyle?.content || '');
+    }, [workingStyle]);
 
     const loadUsers = async () => {
         setUsersLoad(true);
@@ -31,6 +39,22 @@ export default function AdminView({
             setUsers(prev => prev.filter(u => u.id !== id));
         } catch (e) {
             console.error("Delete user error", e);
+        }
+    };
+
+    const handleResetPassword = async (id, username) => {
+        if (!window.confirm(`"${username}" 사용자의 비밀번호를 '1234'로 초기화하시겠습니까?`)) return;
+        try {
+            const success = await resetUserPassword(id);
+            if (success) {
+                alert(`"${username}" 사용자의 비밀번호가 '1234'로 초기화되었습니다.`);
+                // Update local state without refetching all
+                setUsers(prev => prev.map(u => u.id === id ? { ...u, password_plain: '1234' } : u));
+            } else {
+                alert('비밀번호 초기화에 실패했습니다.');
+            }
+        } catch (e) {
+            console.error("Reset password error", e);
         }
     };
 
@@ -78,9 +102,9 @@ export default function AdminView({
                 <button onClick={() => { setAdminAuth(false); setApw(""); }} style={{ background: "none", border: `1px solid ${C.g200}`, borderRadius: 8, padding: "4px 12px", color: C.g400, fontSize: 11, cursor: "pointer" }}>잠금</button>
             </div>
 
-            <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
-                {[{ k: "guide", l: "📄 가이드" }, { k: "logs", l: "📊 로그" }, { k: "users", l: "👥 사용자" }].map(t => (
-                    <button key={t.k} onClick={() => { setAdminTab(t.k); if (t.k === "logs") loadLogs(); if (t.k === "users") loadUsers(); }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, background: adminTab === t.k ? C.p : C.g100, color: adminTab === t.k ? "#fff" : C.g500 }}>{t.l}</button>
+            <div style={{ display: "flex", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
+                {[{ k: "guide", l: "📄 가이드" }, { k: "workstyle", l: "📋 일하는 방식" }, { k: "logs", l: "📊 로그" }, { k: "users", l: "👥 사용자" }].map(t => (
+                    <button key={t.k} onClick={() => { setAdminTab(t.k); if (t.k === "logs") loadLogs(); if (t.k === "users") loadUsers(); }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, background: adminTab === t.k ? C.p : C.g100, color: adminTab === t.k ? "#fff" : C.g500, minWidth: 70 }}>{t.l}</button>
                 ))}
             </div>
 
@@ -111,6 +135,70 @@ export default function AdminView({
                     {err && <div style={{ color: C.red, fontSize: 12, marginTop: 10 }}>{err}</div>}
                 </div>
             ))}
+
+            {adminTab === "workstyle" && (
+                <div>
+                    <div style={{ marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                            <span style={{ fontSize: 18 }}>{workingStyle ? '✅' : '📋'}</span>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>
+                                일하는 방식 {workingStyle ? '(등록됨)' : '(미등록)'}
+                            </div>
+                        </div>
+                        {workingStyle && (
+                            <div style={{ fontSize: 11, color: C.g400, marginBottom: 8 }}>
+                                최종 수정: {new Date(workingStyle.updated_at).toLocaleString('ko-KR')}
+                            </div>
+                        )}
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 12, color: C.g500, fontWeight: 600, marginBottom: 6 }}>7가지 핵심 가치 및 행동 기준을 텍스트로 입력하세요</div>
+                        <textarea
+                            value={wsText}
+                            onChange={e => { setWsText(e.target.value); setWsMsg(''); }}
+                            placeholder={`예시:\n가설사고 (도구): 답을 가지고 시작하는 사람\n- 명확한 의도를 가설로 세우고 시작합니다.\n- BP의 핵심을 골라내고, 행동하고 검증할 수 있는 가설을 만듭니다.\n\n문제정의 (도구): 내외부 BP와 고객으로부터\n- 압도적인 BP를 분해해 핵심원인을 찾고, 고객 경험을 파헤쳐 진짜 문제를 정의합니다.\n...`}
+                            style={{
+                                ...inp, minHeight: 250, resize: 'vertical',
+                                fontFamily: 'inherit', lineHeight: 1.6, fontSize: 13
+                            }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            onClick={async () => {
+                                if (!wsText.trim()) return;
+                                setWsSaving(true);
+                                const ok = await saveWorkingStyle(wsText.trim());
+                                setWsSaving(false);
+                                if (ok) setWsMsg('✅ 저장 완료');
+                            }}
+                            disabled={wsSaving || !wsText.trim()}
+                            style={{
+                                flex: 2, padding: '12px 0', borderRadius: 12, border: 'none',
+                                fontSize: 14, fontWeight: 700, cursor: wsText.trim() ? 'pointer' : 'not-allowed',
+                                background: wsText.trim() ? C.p : C.g200,
+                                color: wsText.trim() ? '#fff' : C.g400
+                            }}
+                        >
+                            {wsSaving ? '저장 중...' : '💾 저장'}
+                        </button>
+                        {workingStyle && (
+                            <button
+                                onClick={async () => {
+                                    if (!window.confirm('일하는 방식 문서를 삭제하시겠습니까?')) return;
+                                    await deleteWorkingStyle();
+                                    setWsText('');
+                                    setWsMsg('🗑️ 삭제 완료');
+                                }}
+                                style={{ ...bS, flex: 1, color: C.red }}
+                            >
+                                🗑️ 삭제
+                            </button>
+                        )}
+                    </div>
+                    {wsMsg && <div style={{ textAlign: 'center', color: C.green, fontSize: 12, marginTop: 10, fontWeight: 600 }}>{wsMsg}</div>}
+                </div>
+            )}
 
             {adminTab === "logs" && (
                 <div>
@@ -172,14 +260,17 @@ export default function AdminView({
                                                     <div style={{ flex: 1 }}>
                                                         <div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>👤 {u.username}</div>
                                                         <div style={{ fontSize: 11, color: C.g400, marginTop: 4 }}>
-                                                            비밀번호: <span style={{ color: C.g600, fontWeight: 600, fontFamily: "monospace" }}>{u.password_plain || "(미저장)"}</span>
+                                                            비밀번호: <span style={{ color: C.g600, fontWeight: 600, fontFamily: "monospace" }}>****</span>
                                                         </div>
                                                         <div style={{ fontSize: 10, color: C.g300, marginTop: 4 }}>
                                                             가입: {new Date(u.created_at).toLocaleDateString("ko-KR")}
                                                             {u.last_login && <span> · 최근: {new Date(u.last_login).toLocaleDateString("ko-KR")}</span>}
                                                         </div>
                                                     </div>
-                                                    <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ background: "none", border: "none", color: C.g300, fontSize: 14, cursor: "pointer", padding: "4px 6px", flexShrink: 0 }}>🗑️</button>
+                                                    <div style={{ display: "flex", gap: 6 }}>
+                                                        <button onClick={() => handleResetPassword(u.id, u.username)} style={{ background: C.g50, border: `1px solid ${C.g200}`, color: C.g600, fontSize: 11, cursor: "pointer", padding: "4px 8px", borderRadius: 6, fontWeight: 600 }}>초기화</button>
+                                                        <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ background: "none", border: "none", color: C.g300, fontSize: 14, cursor: "pointer", padding: "4px 6px" }}>🗑️</button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

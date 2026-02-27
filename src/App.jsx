@@ -8,6 +8,7 @@ import AdminView from "./components/views/AdminView";
 import { SYS, ML, AI_MODELS } from "./utils/constants";
 import { callAI, getAvailableModels } from "./services/aiService";
 import * as db from "./services/supabase";
+import { getWorkingStyle, saveWorkingStyle, deleteWorkingStyle } from "./services/supabase";
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -38,6 +39,7 @@ function App() {
   }, []);
   const [guide, setGuide] = useState(null);
   const [guideLoad, setGuideLoad] = useState(true);
+  const [workingStyle, setWorkingStyle] = useState(null);
   const fileRef = useRef(null);
   const goalsPdfRef = useRef(null);
   const [err, setErr] = useState("");
@@ -91,6 +93,12 @@ function App() {
         if (g) setGuide(g);
       } catch (e) {
         console.error("Guide Load Error", e);
+      }
+      try {
+        const ws = await getWorkingStyle();
+        if (ws) setWorkingStyle(ws);
+      } catch (e) {
+        console.error("WorkingStyle Load Error", e);
       }
       setGuideLoad(false);
       await loadRooms();
@@ -243,6 +251,24 @@ function App() {
     } catch { }
   };
 
+  const saveWorkingStyleFlow = async (content) => {
+    try {
+      await saveWorkingStyle(content);
+      setWorkingStyle({ content, updated_at: new Date().toISOString() });
+      return true;
+    } catch (e) {
+      setErr(e.message);
+      return false;
+    }
+  };
+
+  const deleteWorkingStyleFlow = async () => {
+    try {
+      await deleteWorkingStyle();
+      setWorkingStyle(null);
+    } catch (e) { }
+  };
+
   const callAPI = async (sys, txt, mid, info, additionalDocs = [], targetRoom = null) => {
     setLoading(true); setErr(""); setResult("");
     try {
@@ -254,7 +280,13 @@ function App() {
 
       const prefix = guide?.data ? "위 첫 번째 PDF는 레벨가이드" + (additionalDocs.length > 0 ? ", 두 번째 PDF는 조직목표 문서" : "") + ".\n\n" : "";
 
-      const resText = await callAI(selectedModel, sys, prefix + txt, docs);
+      // Inject working style into system prompt for all modes
+      let finalSys = sys;
+      if (workingStyle?.content) {
+        finalSys = sys + "\n\n[일하는 방식 문서]\n" + workingStyle.content;
+      }
+
+      const resText = await callAI(selectedModel, finalSys, prefix + txt, docs);
       setResult(resText);
       saveLogFlow(mid, info, resText);
 
@@ -267,7 +299,7 @@ function App() {
     }
   };
 
-  const handleModify = async (fb) => {
+  const handleModify = async (fb, spec = "100%") => {
     setLoading(true); setErr(""); const prev = result; setResult("");
 
     try {
@@ -275,7 +307,13 @@ function App() {
       if (guide?.data) {
         docs.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: guide.data } });
       }
-      const txt = `이전 이니셔티브:\n${prev}\n---\n[수정] ${fb}\n\n포맷 유지하며 수정 반영.`;
+
+      let specText = "";
+      if (spec !== "100%") {
+        specText = `\n\n[❗️ 구체화 수준 지시사항 ❗️]\n사용자가 재요청한 구체화(상세도) 수준은 **기본 대비 ${spec}**입니다.\n기존 출력 내용의 분량, 딥다이브 정도, 가이드의 상세함을 ${spec}에 맞게 대폭 조절(축소 또는 확장)하여 출력하세요.`;
+      }
+
+      const txt = `이전 이니셔티브:\n${prev}\n---\n[수정] ${fb}${specText}\n\n포맷 유지하며 수정 반영.`;
 
       const resText = await callAI(selectedModel, SYS[1], txt, docs);
       setResult(resText);
@@ -315,18 +353,19 @@ function App() {
 
   const applyDirect = async () => {
     const r = existingInit.trim();
+    const info = { name: f1.name, team: f1.team, role: f1.role, level: f1.level, expectation: f1.expectation };
     if (!curRoom || curRoom.name !== f1.name) {
       const rm = createRoom(f1.team, f1.name, f1.level || "L1", f1.role || "");
-      await addHistoryFlow(rm, { mode: 1, modeLabel: "📋 직접 입력", result: r });
+      await addHistoryFlow(rm, { mode: 1, modeLabel: "📋 직접 입력", result: r, info });
     } else {
-      await addHistoryFlow(curRoom, { mode: 1, modeLabel: "📋 직접 입력", result: r });
+      await addHistoryFlow(curRoom, { mode: 1, modeLabel: "📋 직접 입력", result: r, info });
     }
-    saveLogFlow(1, { name: f1.name, team: f1.team }, r);
+    saveLogFlow(1, info, r);
     setResult(r); setStep(99);
   };
 
   const gen1 = async () => {
-    const info = { name: f1.name, team: f1.team, role: f1.role, level: f1.level };
+    const info = { name: f1.name, team: f1.team, role: f1.role, level: f1.level, expectation: f1.expectation };
 
     let targetRoom = curRoom;
     if (!curRoom || curRoom.name !== f1.name) {
@@ -412,7 +451,7 @@ function App() {
     else setTimeout(() => setView("home"), 0);
   } else if (view === "mode") {
     if (modeId) content = <ModeView
-      modeId={modeId} curRoom={curRoom} step={step} setStep={setStep} loading={loading} err={err} result={result}
+      modeId={modeId} curRoom={curRoom} rooms={rooms} step={step} setStep={setStep} loading={loading} err={err} result={result}
       modTxt={modTxt} setModTxt={setModTxt} handleModify={handleModify} startMode={startMode} goHome={goHome} goRoom={goRoom}
       guide={guide}
       f1={f1} setF1={setF1} hasExisting={hasExisting} setHasExisting={setHasExisting} existingInit={existingInit} setExistingInit={setExistingInit} applyDirect={applyDirect}
@@ -432,6 +471,7 @@ function App() {
       adminTab={adminTab} setAdminTab={setAdminTab} logsLoad={logsLoad} logs={logs} logDetail={logDetail} setLogDetail={setLogDetail}
       logFilter={logFilter} setLogFilter={setLogFilter} clearLogs={clearLogsFlow} goHome={goHome}
       user={user}
+      workingStyle={workingStyle} saveWorkingStyle={saveWorkingStyleFlow} deleteWorkingStyle={deleteWorkingStyleFlow}
     />;
   }
 
