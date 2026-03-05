@@ -13,9 +13,12 @@ export default function ModeView({
     saveOrgGoals, gen1, goalsValid,
     f2, setF2, gen2,
     f3, setF3, gen3,
-    f4, setF4, gen4
+    f4, setF4, gen4,
+    pinInitiative, unpinInitiative
 }) {
     const [specificity, setSpecificity] = useState("100%");
+    const [pinned, setPinned] = useState(false);
+    const [useFixed, setUseFixed] = useState(null); // null = not decided, true = use fixed, false = enter new
     const backFn = curRoom ? goRoom : goHome;
     const backLbl = curRoom ? `${curRoom.name}` : "홈으로";
     const isResult1 = modeId === 1 && (step === 99 || step >= 5);
@@ -45,7 +48,23 @@ export default function ModeView({
 
                         <div style={{ background: C.g50, borderRadius: 14, padding: 18, maxHeight: 420, overflowY: "auto", fontSize: 13 }}><Md t={result} /></div>
 
-                        {modeId === 1 && (<a href="https://flex.team/goals/member" target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", marginTop: 14, padding: "13px 0", borderRadius: 12, border: "none", background: C.green, color: "#fff", fontSize: 14, fontWeight: 700, textAlign: "center", textDecoration: "none", boxShadow: "0 4px 16px rgba(34,197,94,0.3)", cursor: "pointer", boxSizing: "border-box" }}>📋 이니셔티브 등록하기 (Flex)</a>)}
+                        {modeId === 1 && (
+                            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                                <a href="https://flex.team/goals/member" target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: "none", background: C.green, color: "#fff", fontSize: 14, fontWeight: 700, textAlign: "center", textDecoration: "none", boxShadow: "0 4px 16px rgba(34,197,94,0.3)", cursor: "pointer", boxSizing: "border-box" }}>📋 이니셔티브 등록하기 (Flex)</a>
+                                <button
+                                    onClick={async () => { await pinInitiative(result); setPinned(true); }}
+                                    disabled={pinned || !curRoom}
+                                    style={{
+                                        padding: "13px 18px", borderRadius: 12, border: "none",
+                                        background: pinned ? C.g200 : "linear-gradient(135deg, #F59E0B, #D97706)",
+                                        color: pinned ? C.g500 : "#fff",
+                                        fontSize: 13, fontWeight: 700, cursor: pinned ? "default" : "pointer",
+                                        boxShadow: pinned ? "none" : "0 4px 16px rgba(245,158,11,0.3)",
+                                        whiteSpace: "nowrap"
+                                    }}
+                                >{pinned ? "✅ 고정됨" : "📌 고정"}</button>
+                            </div>
+                        )}
                         {modeId === 2 && (<a href="https://flex.team/one-on-one/all" target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", marginTop: 14, padding: "13px 0", borderRadius: 12, border: "none", background: C.green, color: "#fff", fontSize: 14, fontWeight: 700, textAlign: "center", textDecoration: "none", boxShadow: "0 4px 16px rgba(34,197,94,0.3)", cursor: "pointer", boxSizing: "border-box" }}>📅 1on1 아젠다 등록/공유하기</a>)}
 
                         {modeId === 1 && (
@@ -105,47 +124,84 @@ export default function ModeView({
                 {step === 0 && (
                     <div>
                         <h3 style={{ fontSize: 15, fontWeight: 600, color: C.g800, marginBottom: 14 }}>📋 기본 정보</h3>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                            <div><label style={lbl}>조직명 *</label><input style={inp} placeholder="피플팀" value={f1.team} onChange={e => setF1(p => ({ ...p, team: e.target.value }))} /></div>
-                            <div><label style={lbl}>주기 *</label><input style={inp} placeholder="2026년 상반기" value={f1.period} onChange={e => setF1(p => ({ ...p, period: e.target.value }))} /></div>
-                        </div>
-                        <div style={{ marginBottom: 20 }}>
-                            <label style={lbl}>성명 *</label>
-                            <input style={inp} placeholder="홍길동" value={f1.name} onChange={e => setF1(p => ({ ...p, name: e.target.value }))} />
-                        </div>
 
-                        <div style={{ borderTop: `1px solid ${C.g200}`, paddingTop: 18, marginBottom: 14 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: C.g700, marginBottom: 10 }}>✍️ 기존에 별도로 작성한 이니셔티브가 있나요?</div>
-                            <CheckBtn checked={hasExisting} onClick={() => { setHasExisting(p => !p); if (hasExisting) setExistingInit(""); }}>
-                                네, 이미 작성한 이니셔티브가 있어요
-                            </CheckBtn>
-                        </div>
-
-                        {hasExisting && (
-                            <div style={{ marginBottom: 16 }}>
-                                <label style={lbl}>기존 이니셔티브 내용</label>
-                                <textarea style={{ ...inp, minHeight: 160, resize: "vertical", lineHeight: 1.7 }} placeholder={"작성해둔 이니셔티브를 붙여넣어 주세요"} value={existingInit} onChange={e => setExistingInit(e.target.value)} />
-                                {existingInit.trim().length > 10 && (
-                                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                                        <div style={{ fontSize: 12, color: C.g500, fontWeight: 600, marginBottom: 2 }}>이 이니셔티브를 어떻게 활용할까요?</div>
-                                        <button onClick={() => { if (f1.team && f1.name && f1.period) applyDirect(); }} disabled={!(f1.team && f1.name && f1.period)} style={{ padding: "13px 16px", borderRadius: 12, border: "none", background: f1.team && f1.name && f1.period ? C.green : C.g200, color: f1.team && f1.name && f1.period ? "#fff" : C.g400, fontSize: 13, fontWeight: 700, cursor: f1.team && f1.name && f1.period ? "pointer" : "not-allowed", textAlign: "left", boxShadow: f1.team && f1.name && f1.period ? "0 2px 10px rgba(34,197,94,0.25)" : "none" }}>
-                                            <div>📋 그대로 적용하기</div>
-                                            <div style={{ fontSize: 11, fontWeight: 400, marginTop: 3, opacity: 0.85 }}>수정 없이 바로 Flex에 등록할게요</div>
-                                        </button>
-                                        <button onClick={() => { if (f1.team && f1.name && f1.period) setStep(1); }} disabled={!(f1.team && f1.name && f1.period)} style={{ padding: "13px 16px", borderRadius: 12, border: `1.5px solid ${f1.team && f1.name && f1.period ? C.ps : C.g200}`, background: f1.team && f1.name && f1.period ? C.pl : C.g50, color: f1.team && f1.name && f1.period ? C.pd : C.g400, fontSize: 13, fontWeight: 700, cursor: f1.team && f1.name && f1.period ? "pointer" : "not-allowed", textAlign: "left" }}>
-                                            <div>🚀 이를 기반으로 AI가 디벨롭하기</div>
-                                            <div style={{ fontSize: 11, fontWeight: 400, marginTop: 3, opacity: 0.85 }}>기존 내용을 바탕으로 가치 기반 이니셔티브로 발전시킬게요</div>
-                                        </button>
-                                        {!(f1.team && f1.name && f1.period) && <div style={{ fontSize: 11, color: C.gold, marginTop: 2 }}>⚠️ 조직명, 성명, 주기를 먼저 입력해주세요</div>}
-                                    </div>
-                                )}
+                        {/* 고정 이니셔티브 안내 */}
+                        {curRoom?.fixed_initiative && useFixed === null && (
+                            <div style={{ marginBottom: 20, background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", borderRadius: 14, padding: 18, border: "1.5px solid #F59E0B" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                    <span style={{ fontSize: 20 }}>📌</span>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: "#92400E" }}>고정된 이니셔티브가 있습니다</div>
+                                </div>
+                                <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 10, padding: 12, fontSize: 12, color: C.g600, lineHeight: 1.6, maxHeight: 100, overflowY: "auto", whiteSpace: "pre-wrap", marginBottom: 14 }}>{curRoom.fixed_initiative.substring(0, 300)}{curRoom.fixed_initiative.length > 300 ? "..." : ""}</div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                    <button
+                                        onClick={() => {
+                                            setUseFixed(true);
+                                            setHasExisting(true);
+                                            setExistingInit(curRoom.fixed_initiative);
+                                        }}
+                                        style={{ padding: "13px 16px", borderRadius: 12, border: "none", background: "linear-gradient(135deg, #F59E0B, #D97706)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", boxShadow: "0 2px 10px rgba(245,158,11,0.3)" }}
+                                    >
+                                        <div>📌 고정 이니셔티브 사용하기</div>
+                                        <div style={{ fontSize: 11, fontWeight: 400, marginTop: 3, opacity: 0.9 }}>이 이니셔티브를 기반으로 진행합니다</div>
+                                    </button>
+                                    <button
+                                        onClick={() => setUseFixed(false)}
+                                        style={{ padding: "13px 16px", borderRadius: 12, border: `1.5px solid ${C.g200}`, background: C.g50, color: C.g600, fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left" }}
+                                    >
+                                        <div>✏️ 다른 이니셔티브로 새로 만들기</div>
+                                        <div style={{ fontSize: 11, fontWeight: 400, marginTop: 3, opacity: 0.7 }}>새로운 이니셔티브를 입력합니다</div>
+                                    </button>
+                                </div>
                             </div>
                         )}
 
-                        {!hasExisting && (
-                            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                                <button onClick={() => setStep(1)} disabled={!(f1.team && f1.name && f1.period)} style={bP(!!(f1.team && f1.name && f1.period))}>다음 →</button>
-                            </div>
+                        {/* 고정 이니셔티브 선택이 끝난 후 or 고정 없을 때 기본 정보 폼 표시 */}
+                        {(!curRoom?.fixed_initiative || useFixed !== null) && (
+                            <>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                                    <div><label style={lbl}>조직명 *</label><input style={inp} placeholder="피플팀" value={f1.team} onChange={e => setF1(p => ({ ...p, team: e.target.value }))} /></div>
+                                    <div><label style={lbl}>주기 *</label><input style={inp} placeholder="2026년 상반기" value={f1.period} onChange={e => setF1(p => ({ ...p, period: e.target.value }))} /></div>
+                                </div>
+                                <div style={{ marginBottom: 20 }}>
+                                    <label style={lbl}>성명 *</label>
+                                    <input style={inp} placeholder="홍길동" value={f1.name} onChange={e => setF1(p => ({ ...p, name: e.target.value }))} />
+                                </div>
+
+                                <div style={{ borderTop: `1px solid ${C.g200}`, paddingTop: 18, marginBottom: 14 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: C.g700, marginBottom: 10 }}>✍️ 기존에 별도로 작성한 이니셔티브가 있나요?</div>
+                                    <CheckBtn checked={hasExisting} onClick={() => { setHasExisting(p => !p); if (hasExisting) setExistingInit(""); }}>
+                                        네, 이미 작성한 이니셔티브가 있어요
+                                    </CheckBtn>
+                                </div>
+
+                                {hasExisting && (
+                                    <div style={{ marginBottom: 16 }}>
+                                        <label style={lbl}>기존 이니셔티브 내용</label>
+                                        <textarea style={{ ...inp, minHeight: 160, resize: "vertical", lineHeight: 1.7 }} placeholder={"작성해둔 이니셔티브를 붙여넣어 주세요"} value={existingInit} onChange={e => setExistingInit(e.target.value)} />
+                                        {existingInit.trim().length > 10 && (
+                                            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                                                <div style={{ fontSize: 12, color: C.g500, fontWeight: 600, marginBottom: 2 }}>이 이니셔티브를 어떻게 활용할까요?</div>
+                                                <button onClick={() => { if (f1.team && f1.name && f1.period) applyDirect(); }} disabled={!(f1.team && f1.name && f1.period)} style={{ padding: "13px 16px", borderRadius: 12, border: "none", background: f1.team && f1.name && f1.period ? C.green : C.g200, color: f1.team && f1.name && f1.period ? "#fff" : C.g400, fontSize: 13, fontWeight: 700, cursor: f1.team && f1.name && f1.period ? "pointer" : "not-allowed", textAlign: "left", boxShadow: f1.team && f1.name && f1.period ? "0 2px 10px rgba(34,197,94,0.25)" : "none" }}>
+                                                    <div>📋 그대로 적용하기</div>
+                                                    <div style={{ fontSize: 11, fontWeight: 400, marginTop: 3, opacity: 0.85 }}>수정 없이 바로 Flex에 등록할게요</div>
+                                                </button>
+                                                <button onClick={() => { if (f1.team && f1.name && f1.period) setStep(1); }} disabled={!(f1.team && f1.name && f1.period)} style={{ padding: "13px 16px", borderRadius: 12, border: `1.5px solid ${f1.team && f1.name && f1.period ? C.ps : C.g200}`, background: f1.team && f1.name && f1.period ? C.pl : C.g50, color: f1.team && f1.name && f1.period ? C.pd : C.g400, fontSize: 13, fontWeight: 700, cursor: f1.team && f1.name && f1.period ? "pointer" : "not-allowed", textAlign: "left" }}>
+                                                    <div>🚀 이를 기반으로 AI가 디벨롭하기</div>
+                                                    <div style={{ fontSize: 11, fontWeight: 400, marginTop: 3, opacity: 0.85 }}>기존 내용을 바탕으로 가치 기반 이니셔티브로 발전시킬게요</div>
+                                                </button>
+                                                {!(f1.team && f1.name && f1.period) && <div style={{ fontSize: 11, color: C.gold, marginTop: 2 }}>⚠️ 조직명, 성명, 주기를 먼저 입력해주세요</div>}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {!hasExisting && (
+                                    <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                                        <button onClick={() => setStep(1)} disabled={!(f1.team && f1.name && f1.period)} style={bP(!!(f1.team && f1.name && f1.period))}>다음 →</button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 )}
@@ -329,6 +385,16 @@ export default function ModeView({
                 <GS guide={guide} />
                 {step === 0 && (
                     <div>
+                        {/* 고정 이니셔티브 안내 카드 */}
+                        {curRoom?.fixed_initiative && (
+                            <div style={{ marginBottom: 16, background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", borderRadius: 12, padding: 14, border: "1px solid #F59E0B" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                                    <span style={{ fontSize: 16 }}>📌</span>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: "#92400E" }}>고정 이니셔티브 적용됨</div>
+                                </div>
+                                <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 8, padding: 10, fontSize: 11, color: C.g600, lineHeight: 1.5, maxHeight: 60, overflowY: "auto", whiteSpace: "pre-wrap" }}>{curRoom.fixed_initiative.substring(0, 200)}{curRoom.fixed_initiative.length > 200 ? "..." : ""}</div>
+                            </div>
+                        )}
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
                             <div><label style={lbl}>대상자 성명 *</label><input style={inp} placeholder="홍길동" value={f2.name} onChange={e => setF2(p => ({ ...p, name: e.target.value }))} /></div>
                             <div><label style={lbl}>레벨</label><div style={{ display: "flex", gap: 4 }}>{LEVELS.map(l => (<button key={l} onClick={() => setF2(p => ({ ...p, level: l }))} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, background: f2.level === l ? C.p : C.g100, color: f2.level === l ? "#fff" : C.g500 }}>{l}</button>))}</div></div>
@@ -364,6 +430,16 @@ export default function ModeView({
         return (
             <Shell title="📝 1on1 미팅 노트" onBack={backFn} backLabel={backLbl}>
                 <div style={{ background: C.pl, borderRadius: 10, padding: 12, marginBottom: 16, border: `1px solid ${C.ps}` }}><div style={{ fontSize: 12, color: C.p, fontWeight: 600 }}>📝 600자 이내 가치 중심 압축</div></div>
+                {/* 고정 이니셔티브 안내 카드 */}
+                {curRoom?.fixed_initiative && (
+                    <div style={{ marginBottom: 14, background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", borderRadius: 12, padding: 14, border: "1px solid #F59E0B" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                            <span style={{ fontSize: 16 }}>📌</span>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#92400E" }}>고정 이니셔티브 참고 중</div>
+                        </div>
+                        <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 8, padding: 10, fontSize: 11, color: C.g600, lineHeight: 1.5, maxHeight: 60, overflowY: "auto", whiteSpace: "pre-wrap" }}>{curRoom.fixed_initiative.substring(0, 200)}{curRoom.fixed_initiative.length > 200 ? "..." : ""}</div>
+                    </div>
+                )}
                 <div style={{ marginBottom: 10 }}><label style={lbl}>구성원 이름 *</label><input style={inp} placeholder="홍길동" value={f3.name} onChange={e => setF3(p => ({ ...p, name: e.target.value }))} /></div>
                 <div><label style={lbl}>미팅 내용 *</label><textarea style={{ ...inp, minHeight: 200, resize: "vertical" }} placeholder="미팅 대화 내용 (녹음/메모 등)" value={f3.content} onChange={e => setF3(p => ({ ...p, content: e.target.value }))} /></div>
                 <div style={{ display: "flex", gap: 10, marginTop: 20 }}><button onClick={() => { setStep(1); gen3(); }} disabled={!(f3.name && f3.content.length >= 20)} style={bP(!!(f3.name && f3.content.length >= 20))}>📝 생성</button></div>
@@ -374,6 +450,16 @@ export default function ModeView({
     if (modeId === 4) {
         return (
             <Shell title="☕️ 라포 1on1 아젠다" onBack={backFn} backLabel={backLbl}>
+                {/* 고정 이니셔티브 안내 카드 */}
+                {curRoom?.fixed_initiative && (
+                    <div style={{ marginBottom: 14, background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", borderRadius: 12, padding: 14, border: "1px solid #F59E0B" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                            <span style={{ fontSize: 16 }}>📌</span>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#92400E" }}>고정 이니셔티브 참고 중</div>
+                        </div>
+                        <div style={{ background: "rgba(255,255,255,0.8)", borderRadius: 8, padding: 10, fontSize: 11, color: C.g600, lineHeight: 1.5, maxHeight: 60, overflowY: "auto", whiteSpace: "pre-wrap" }}>{curRoom.fixed_initiative.substring(0, 200)}{curRoom.fixed_initiative.length > 200 ? "..." : ""}</div>
+                    </div>
+                )}
                 <div style={{ marginBottom: 10 }}><label style={lbl}>구성원 이름 *</label><input style={inp} placeholder="홍길동" value={f4.name} onChange={e => setF4(p => ({ ...p, name: e.target.value }))} /></div>
                 <div style={{ marginBottom: 10 }}><label style={lbl}>직무</label><input style={inp} placeholder="마케터" value={f4.role} onChange={e => setF4(p => ({ ...p, role: e.target.value }))} /></div>
                 <div><label style={lbl}>참고 맥락 (선택)</label><textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} placeholder="최근 상황, 특이사항 등" value={f4.context} onChange={e => setF4(p => ({ ...p, context: e.target.value }))} /></div>

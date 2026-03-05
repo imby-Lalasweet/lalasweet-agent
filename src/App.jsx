@@ -328,6 +328,20 @@ function App() {
 
   const openRoom = (room) => { setCurRoom(room); setExpandIdx(null); setView("room"); };
 
+  const pinInitiative = async (content) => {
+    if (!curRoom) return;
+    const updated = { ...curRoom, fixed_initiative: content };
+    setCurRoom(updated);
+    await saveRoomFlow(updated);
+  };
+
+  const unpinInitiative = async () => {
+    if (!curRoom) return;
+    const updated = { ...curRoom, fixed_initiative: null };
+    setCurRoom(updated);
+    await saveRoomFlow(updated);
+  };
+
   const startMode = (mid, room) => {
     setModeId(mid); setStep(0); setResult(""); setErr(""); setLoading(false);
     setSavedGoals(null); setGoalsChecked(false); setModTxt("");
@@ -336,7 +350,7 @@ function App() {
     if (room) {
       const n = room.name, t = room.team, r = room.role || "", l = room.level || "L1";
       if (mid === 1) setF1(p => ({ ...p, team: t, name: n, level: l, role: r }));
-      if (mid === 2) setF2(p => ({ ...p, name: n, level: l, role: r }));
+      if (mid === 2) setF2(p => ({ ...p, name: n, level: l, role: r, initiatives: room.fixed_initiative || "" }));
       if (mid === 3) setF3(p => ({ ...p, name: n }));
       if (mid === 4) setF4(p => ({ ...p, name: n, role: r }));
     }
@@ -395,7 +409,8 @@ function App() {
       targetRoom = createRoom("", f2.name, f2.level, f2.role);
       setCurRoom(targetRoom);
     }
-    callAPI(SYS[2], `[구성원] ${f2.name} [레벨] ${f2.level} [직무] ${f2.role}\n[이니셔티브]\n${f2.initiatives}\n[리더고민]\n${f2.concern || "없음"}\n\n성과 1on1 아젠다 생성. 리더 고민 반영.`, 2, info, [], targetRoom);
+    const fixedCtx = targetRoom?.fixed_initiative ? `\n[고정 이니셔티브 — 이 내용을 기반으로 아젠다를 생성하세요]\n${targetRoom.fixed_initiative}\n` : "";
+    callAPI(SYS[2], `[구성원] ${f2.name} [레벨] ${f2.level} [직무] ${f2.role}\n[이니셔티브]\n${f2.initiatives}\n[리더고민]\n${f2.concern || "없음"}${fixedCtx}\n\n성과 1on1 아젠다 생성. 리더 고민 반영.`, 2, info, [], targetRoom);
   };
 
   const gen3 = () => {
@@ -404,7 +419,8 @@ function App() {
       targetRoom = createRoom("", f3.name, "L1", "");
       setCurRoom(targetRoom);
     }
-    callAPI(SYS[3], `[구성원] ${f3.name}\n[미팅내용]\n${f3.content}\n\n600자 이내 가치중심 요약.`, 3, { name: f3.name }, [], targetRoom);
+    const fixedCtx = targetRoom?.fixed_initiative ? `\n[고정 이니셔티브 — 이 내용을 참고하여 미팅 노트를 정리하세요]\n${targetRoom.fixed_initiative}\n` : "";
+    callAPI(SYS[3], `[구성원] ${f3.name}\n[미팅내용]\n${f3.content}${fixedCtx}\n\n600자 이내 가치중심 요약.`, 3, { name: f3.name }, [], targetRoom);
   };
 
   const gen4 = () => {
@@ -413,7 +429,8 @@ function App() {
       targetRoom = createRoom("", f4.name, "L1", f4.role);
       setCurRoom(targetRoom);
     }
-    callAPI(SYS[4], `[구성원] ${f4.name} (${f4.role})\n[맥락] ${f4.context || "없음"}\n\n라포 1on1 아젠다 생성.`, 4, { name: f4.name, role: f4.role }, [], targetRoom);
+    const fixedCtx = targetRoom?.fixed_initiative ? `\n[고정 이니셔티브 — 이 내용을 참고하여 라포 아젠다를 생성하세요]\n${targetRoom.fixed_initiative}\n` : "";
+    callAPI(SYS[4], `[구성원] ${f4.name} (${f4.role})\n[맥락] ${f4.context || "없음"}${fixedCtx}\n\n라포 1on1 아젠다 생성.`, 4, { name: f4.name, role: f4.role }, [], targetRoom);
   };
 
   const goalsValid = goalsMode === "pdf" ? !!goalsPdfData : goals.trim().length > 10;
@@ -462,6 +479,7 @@ function App() {
       f2={f2} setF2={setF2} gen2={gen2}
       f3={f3} setF3={setF3} gen3={gen3}
       f4={f4} setF4={setF4} gen4={gen4}
+      pinInitiative={pinInitiative} unpinInitiative={unpinInitiative}
     />;
     else setTimeout(() => setView("home"), 0);
   } else if (view === "admin") {
