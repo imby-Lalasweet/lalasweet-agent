@@ -10,6 +10,33 @@ import { callAI, getAvailableModels } from "./services/aiService";
 import * as db from "./services/supabase";
 import { getWorkingStyle, saveWorkingStyle, deleteWorkingStyle } from "./services/supabase";
 
+window.showToast = (msg, type = "info") => {
+  window.dispatchEvent(new CustomEvent("show-toast", { detail: { msg, type } }));
+};
+
+const ToastContainer = () => {
+  const [toasts, setToasts] = useState([]);
+  useEffect(() => {
+    const handler = e => {
+      const id = Date.now() + Math.random();
+      setToasts(p => [...p, { id, ...e.detail }]);
+      setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3000);
+    };
+    window.addEventListener("show-toast", handler);
+    return () => window.removeEventListener("show-toast", handler);
+  }, []);
+  return (
+    <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", gap: 10, zIndex: 99999, alignItems: "center", pointerEvents: "none", width: "100%", maxWidth: 400 }}>
+      <style>{`@keyframes fwToast{0%{transform:translateY(-20px);opacity:0}100%{transform:translateY(0);opacity:1}}`}</style>
+      {toasts.map(t => (
+        <div key={t.id} style={{ background: t.type === "error" ? "#EF4444" : "#1F2937", color: "#fff", padding: "12px 24px", borderRadius: 30, boxShadow: "0 10px 25px rgba(0,0,0,0.2)", fontSize: 13, fontWeight: 700, animation: "fwToast 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)", textAlign: "center", width: "max-content", maxWidth: "90%" }}>
+          {t.type === "error" ? "⚠️" : "✅"} {t.msg}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(() => {
     try {
@@ -35,7 +62,21 @@ function App() {
     };
     window.addEventListener("hashchange", handleHashChange);
     if (!window.location.hash) window.location.hash = "home";
-    return () => window.removeEventListener("hashchange", handleHashChange);
+
+    // Listen for Supabase Auth changes (Google Login callback)
+    const { data: { subscription } } = db.supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const syncedUser = await db.syncGoogleUser(session.user);
+        if (syncedUser) {
+          setUser(syncedUser);
+        }
+      }
+    });
+
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+      subscription?.unsubscribe();
+    }
   }, []);
   const [guide, setGuide] = useState(null);
   const [guideLoad, setGuideLoad] = useState(true);
@@ -50,31 +91,39 @@ function App() {
 
   const [modeId, setModeId] = useState(null);
   const [step, setStep] = useState(0);
-  const [selectedModel, setSelectedModel] = useState("claude-sonnet-4-20250514");
+  const [selectedModel, setSelectedModel] = useState("claude-opus-4-20250514");
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
   const [modTxt, setModTxt] = useState("");
   const [expandIdx, setExpandIdx] = useState(null);
 
+  // Load draft from localStorage
+  const initDraft = () => { try { const s = localStorage.getItem("lalasweet_draft"); return s ? JSON.parse(s) : null; } catch { return null; } };
+  const draft = initDraft() || {};
+
   // Mode 1 states
-  const [f1, setF1] = useState({ team: "", period: "", name: "", level: "L1", role: "", expectation: "", preLevel: "N" });
-  const [okr, setOkr] = useState("");
-  const [noOkr, setNoOkr] = useState(false);
-  const [goals, setGoals] = useState("");
+  const [f1, setF1] = useState(draft.f1 || { team: "", period: "", name: "", level: "L1", role: "", expectation: "", preLevel: "N" });
+  const [okr, setOkr] = useState(draft.okr || "");
+  const [noOkr, setNoOkr] = useState(draft.noOkr || false);
+  const [goals, setGoals] = useState(draft.goals || "");
   const [savedGoals, setSavedGoals] = useState(null);
   const [goalsChecked, setGoalsChecked] = useState(false);
 
-  const [goalsMode, setGoalsMode] = useState("text"); // "text" | "pdf"
+  const [goalsMode, setGoalsMode] = useState(draft.goalsMode || "text"); // "text" | "pdf"
   const [goalsPdfName, setGoalsPdfName] = useState("");
   const [goalsPdfData, setGoalsPdfData] = useState("");
 
-  const [hasExisting, setHasExisting] = useState(false);
-  const [existingInit, setExistingInit] = useState("");
+  const [hasExisting, setHasExisting] = useState(draft.hasExisting || false);
+  const [existingInit, setExistingInit] = useState(draft.existingInit || "");
 
   // Other Modes
-  const [f2, setF2] = useState({ name: "", level: "L1", role: "", initiatives: "", concern: "" });
-  const [f3, setF3] = useState({ name: "", content: "" });
-  const [f4, setF4] = useState({ name: "", role: "", context: "" });
+  const [f2, setF2] = useState(draft.f2 || { name: "", level: "L1", role: "", initiatives: "", concern: "" });
+  const [f3, setF3] = useState(draft.f3 || { name: "", content: "" });
+  const [f4, setF4] = useState(draft.f4 || { name: "", role: "", context: "" });
+
+  useEffect(() => {
+    localStorage.setItem("lalasweet_draft", JSON.stringify({ f1, okr, noOkr, goals, goalsMode, hasExisting, existingInit, f2, f3, f4 }));
+  }, [f1, okr, noOkr, goals, goalsMode, hasExisting, existingInit, f2, f3, f4]);
 
   const [adminAuth, setAdminAuth] = useState(false);
   const [apw, setApw] = useState("");
@@ -445,7 +494,7 @@ function App() {
     return result;
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setUser(null);
     setView("home");
     setRooms([]);
@@ -453,6 +502,7 @@ function App() {
     setGuide(null);
     setGuideLoad(true);
     setAdminAuth(false);
+    try { await db.supabase.auth.signOut(); } catch (e) { }
   };
 
   if (!user) {
@@ -464,7 +514,7 @@ function App() {
   if (view === "home") {
     content = <HomeView guideLoad={guideLoad} guide={guide} roomsLoad={roomsLoad} rooms={rooms} setCurRoom={setCurRoom} startMode={startMode} deleteRoom={deleteRoomFlow} setView={setView} user={user} onLogout={handleLogout} />;
   } else if (view === "room") {
-    if (curRoom) content = <RoomView curRoom={curRoom} goHome={goHome} startMode={startMode} />;
+    if (curRoom) content = <RoomView curRoom={curRoom} goHome={goHome} startMode={startMode} unpinInitiative={unpinInitiative} />;
     else setTimeout(() => setView("home"), 0);
   } else if (view === "mode") {
     if (modeId) content = <ModeView
@@ -524,6 +574,7 @@ function App() {
         </select>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", maxWidth: 180, lineHeight: 1.3, fontWeight: 500 }}>{currentModel?.desc || ""}</span>
       </div>
+      <ToastContainer />
     </>
   );
 }

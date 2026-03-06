@@ -4,7 +4,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      storageKey: 'lalasweet-auth-token',
+      persistSession: true,
+    },
+  })
   : null;
 
 // ====== Auth / Users ======
@@ -15,6 +20,62 @@ async function hashPassword(password) {
   const hash = await crypto.subtle.digest('SHA-256', data);
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+// Google OAuth Login
+export const signInWithGoogle = async () => {
+  if (!supabase) return { error: 'DB 미연결' };
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin
+    }
+  });
+  return { data, error };
+};
+
+export const syncGoogleUser = async (authUser) => {
+  if (!supabase || !authUser) return null;
+  // Get name from Google profile or fallback to email part
+  const fullName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'GoogleUser';
+
+  // Custom dummy password for Google users internally
+  const pwPlain = `google_${authUser.id.split('-')[0]}`;
+  const pwHash = await hashPassword(pwPlain);
+
+  // Check if user exists by username (to link accounts)
+  const { data: existing } = await supabase
+    .from('users')
+    .select('*')
+    .eq('username', fullName)
+    .maybeSingle();
+
+  if (existing) {
+    // Update last_login and email if missing
+    await supabase.from('users').update({
+      last_login: new Date().toISOString(),
+      email: authUser.email || existing.email
+    }).eq('id', existing.id);
+    return existing;
+  }
+
+  // Create new user linked to Google name
+  const { data: newUser, error } = await supabase
+    .from('users')
+    .insert({
+      username: fullName,
+      password_hash: pwHash,
+      password_plain: pwPlain,
+      email: authUser.email || null
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error syncing Google user to users table:", error.message);
+    return null;
+  }
+  return newUser;
+};
 
 /**
  * Login: returns { success, user, error }

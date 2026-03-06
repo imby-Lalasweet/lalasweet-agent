@@ -47,11 +47,11 @@ export default function AdminView({
         try {
             const success = await resetUserPassword(id);
             if (success) {
-                alert(`"${username}" 사용자의 비밀번호가 '1234'로 초기화되었습니다.`);
+                window.showToast(`"${username}" 사용자의 비밀번호가 '1234'로 초기화되었습니다.`);
                 // Update local state without refetching all
                 setUsers(prev => prev.map(u => u.id === id ? { ...u, password_plain: '1234' } : u));
             } else {
-                alert('비밀번호 초기화에 실패했습니다.');
+                window.showToast('비밀번호 초기화에 실패했습니다.', 'error');
             }
         } catch (e) {
             console.error("Reset password error", e);
@@ -258,7 +258,10 @@ export default function AdminView({
                                             <div key={u.id} style={{ background: C.w, borderRadius: 10, border: `1px solid ${C.g200}`, padding: "14px 16px" }}>
                                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                                     <div style={{ flex: 1 }}>
-                                                        <div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>👤 {u.username}</div>
+                                                        <div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>
+                                                            👤 {u.username}
+                                                            {u.email && <span style={{ fontSize: 12, fontWeight: 500, color: C.g500, marginLeft: 8, background: C.g50, padding: "2px 6px", borderRadius: 4, transform: "translateY(-1px)", display: "inline-block" }}>✉️ {u.email}</span>}
+                                                        </div>
                                                         <div style={{ fontSize: 11, color: C.g400, marginTop: 4 }}>
                                                             비밀번호: <span style={{ color: C.g600, fontWeight: 600, fontFamily: "monospace" }}>****</span>
                                                         </div>
