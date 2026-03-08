@@ -64,14 +64,18 @@ function App() {
     if (!window.location.hash) window.location.hash = "home";
 
     // Listen for Supabase Auth changes (Google Login callback)
-    const { data: { subscription } } = db.supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const syncedUser = await db.syncGoogleUser(session.user);
-        if (syncedUser) {
-          setUser(syncedUser);
+    let subscription = null;
+    if (db.supabase) {
+      const { data } = db.supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const syncedUser = await db.syncGoogleUser(session.user);
+          if (syncedUser) {
+            setUser(syncedUser);
+          }
         }
-      }
-    });
+      });
+      subscription = data?.subscription;
+    }
 
     return () => {
       window.removeEventListener("hashchange", handleHashChange);

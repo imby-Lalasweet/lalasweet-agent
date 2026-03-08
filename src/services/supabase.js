@@ -84,36 +84,51 @@ export const syncGoogleUser = async (authUser) => {
  * - username not found → auto-register then login
  */
 export const loginUser = async (username, password) => {
-  if (!supabase) return { success: false, error: 'DB 미연결' };
-  const pw = await hashPassword(password);
+  if (!supabase) return { success: false, error: 'DB가 연결되지 않았습니다. 관리자에게 문의하세요.' };
 
-  // Check if user exists
-  const { data: existing } = await supabase
-    .from('users')
-    .select('*')
-    .eq('username', username)
-    .maybeSingle();
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.')), 15000)
+  );
 
-  if (existing) {
-    // User found – check password
-    if (existing.password_hash === pw) {
-      // Update last_login
-      await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', existing.id);
-      return { success: true, user: existing, isNew: false };
-    } else {
-      return { success: false, error: '비밀번호가 틀렸습니다' };
-    }
+  try {
+    const loginPromise = (async () => {
+      const pw = await hashPassword(password);
+
+      // Check if user exists
+      const { data: existing, error: fetchErr } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (fetchErr) return { success: false, error: `DB 조회 오류: ${fetchErr.message}` };
+
+      if (existing) {
+        // User found – check password
+        if (existing.password_hash === pw) {
+          // Update last_login
+          await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', existing.id);
+          return { success: true, user: existing, isNew: false };
+        } else {
+          return { success: false, error: '비밀번호가 틀렸습니다' };
+        }
+      }
+
+      // User not found – auto register
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert({ username, password_hash: pw, password_plain: password })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, user: newUser, isNew: true };
+    })();
+
+    return await Promise.race([loginPromise, timeoutPromise]);
+  } catch (e) {
+    return { success: false, error: e.message };
   }
-
-  // User not found – auto register
-  const { data: newUser, error } = await supabase
-    .from('users')
-    .insert({ username, password_hash: pw, password_plain: password })
-    .select()
-    .single();
-
-  if (error) return { success: false, error: error.message };
-  return { success: true, user: newUser, isNew: true };
 };
 
 export const getAllUsers = async () => {
