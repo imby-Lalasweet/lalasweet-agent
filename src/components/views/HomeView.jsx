@@ -10,7 +10,15 @@ export default function HomeView({
 }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [quickModeId, setQuickModeId] = useState(null);
-    const [showGuide, setShowGuide] = useState(false);
+    const [showGuide, setShowGuide] = useState(() => {
+        const seen = localStorage.getItem('lalasweet_guide_seen_v1');
+        return !seen;
+    });
+
+    const closeGuide = () => {
+        setShowGuide(false);
+        localStorage.setItem('lalasweet_guide_seen_v1', '1');
+    };
     const filteredRooms = rooms.filter(r =>
         (r.name && r.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (r.team && r.team.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -111,7 +119,7 @@ export default function HomeView({
                 <div style={{ textAlign: "center", marginTop: 24, color: C.g300, fontSize: 11 }}>Powered by Multi-AI · 7 Core Values</div>
             </div>
 
-            {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
+            {showGuide && <GuideModal onClose={closeGuide} />}
 
             {quickModeId && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
