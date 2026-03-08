@@ -116,8 +116,8 @@ export default function ModeView({
         const steps1 = ["기본정보", "구성원정보", "개인OKR", "조직목표", "확인"];
         return (
             <Shell title="🚀 이니셔티브 설정" onBack={backFn} backLabel={backLbl}>
-                <GS guide={guide} />
-                <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
+                <div data-tutorial="guide-status"><GS guide={guide} /></div>
+                <div data-tutorial="step-progress" style={{ display: "flex", gap: 4, marginBottom: 20 }}>
                     {steps1.map((s, i) => (<div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= step ? C.p : C.g200 }} />))}
                 </div>
 

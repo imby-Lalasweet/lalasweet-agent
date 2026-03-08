@@ -4,6 +4,7 @@ import HomeView from "./components/views/HomeView";
 import RoomView from "./components/views/RoomView";
 import ModeView from "./components/views/ModeView";
 import AdminView from "./components/views/AdminView";
+import Tutorial from "./components/ui/Tutorial";
 
 import { SYS, ML, AI_MODELS } from "./utils/constants";
 import { callAI, getAvailableModels } from "./services/aiService";
@@ -574,6 +575,7 @@ function App() {
         </select>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", maxWidth: 180, lineHeight: 1.3, fontWeight: 500 }}>{currentModel?.desc || ""}</span>
       </div>
+      <Tutorial view={view} />
       <ToastContainer />
     </>
   );

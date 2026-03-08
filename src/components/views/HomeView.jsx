@@ -54,7 +54,7 @@ export default function HomeView({
                 <div style={{ marginBottom: 24 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                         <div style={{ fontSize: 15, fontWeight: 700, color: C.g800 }}>👥 내 구성원</div>
-                        <button onClick={() => { setCurRoom(null); startMode(1, null); }} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: C.p, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ 새 구성원</button>
+                        <button data-tutorial="new-member" onClick={() => { setCurRoom(null); startMode(1, null); }} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: C.p, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ 새 구성원</button>
                     </div>
 
                     <div style={{ marginBottom: 12 }}>
@@ -67,7 +67,7 @@ export default function HomeView({
                         />
                     </div>
 
-                    {roomsLoad ? <div style={{ color: C.g400, fontSize: 13, textAlign: "center", padding: 20 }}>불러오는 중...</div>
+                    <div data-tutorial="room-list">{roomsLoad ? <div style={{ color: C.g400, fontSize: 13, textAlign: "center", padding: 20 }}>불러오는 중...</div>
                         : rooms.length === 0 ? <div style={{ ...crd, textAlign: "center", padding: "30px 20px" }}><div style={{ fontSize: 32, marginBottom: 8 }}>📋</div><div style={{ color: C.g400, fontSize: 13 }}>아직 관리 중인 구성원이 없습니다</div><div style={{ color: C.g300, fontSize: 12, marginTop: 4 }}>새 구성원을 추가하고 이니셔티브를 설정해보세요</div></div>
                             : filteredRooms.length === 0 ? <div style={{ textAlign: "center", padding: "20px", color: C.g400, fontSize: 13 }}>검색 결과가 없습니다</div>
                                 : (<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -86,9 +86,10 @@ export default function HomeView({
                                         </div>
                                     ))}
                                 </div>)}
+                    </div>
                 </div>
 
-                <div style={{ marginBottom: 24 }}>
+                <div data-tutorial="quick-actions" style={{ marginBottom: 24 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: C.g800, marginBottom: 12 }}>⚡ 빠른 실행</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         {[{ id: 1, icon: "🚀", t: "이니셔티브" }, { id: 2, icon: "📅", t: "성과 1on1" }, { id: 3, icon: "📝", t: "미팅 노트" }, { id: 4, icon: "☕️", t: "라포 1on1" }].map(m => (
@@ -100,7 +101,7 @@ export default function HomeView({
                     </div>
                 </div>
 
-                <button onClick={() => setView("admin")} style={{ ...crd, width: "100%", padding: "14px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: `1px solid ${C.g200}` }}>
+                <button data-tutorial="admin-btn" onClick={() => setView("admin")} style={{ ...crd, width: "100%", padding: "14px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", border: `1px solid ${C.g200}` }}>
                     <span style={{ fontSize: 22 }}>⚙️</span><div><div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>관리자</div></div>
                 </button>
                 <div style={{ textAlign: "center", marginTop: 24, color: C.g300, fontSize: 11 }}>Powered by Multi-AI · 7 Core Values</div>

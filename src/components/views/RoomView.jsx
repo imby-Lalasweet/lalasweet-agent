@@ -18,7 +18,7 @@ export default function RoomView({ curRoom, goHome, startMode, unpinInitiative }
 
             <div style={{ fontSize: 11, color: C.g400, marginBottom: 16 }}>마지막 수정: {new Date(curRoom.updatedAt).toLocaleString("ko-KR")}</div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+            <div data-tutorial="mode-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
                 {[{ id: 1, icon: "🚀", t: "이니셔티브" }, { id: 2, icon: "📅", t: "성과 1on1" }, { id: 3, icon: "📝", t: "미팅 노트" }, { id: 4, icon: "☕️", t: "라포 1on1" }].map(m => (
                     <button key={m.id} onClick={() => startMode(m.id, curRoom)} style={{ padding: "12px", borderRadius: 10, border: `1px solid ${C.g200}`, background: C.g50, cursor: "pointer", textAlign: "center" }}>
                         <span style={{ fontSize: 18 }}>{m.icon}</span>
@@ -29,7 +29,7 @@ export default function RoomView({ curRoom, goHome, startMode, unpinInitiative }
 
             {/* 고정 이니셔티브 표시 */}
             {curRoom.fixed_initiative && (
-                <div style={{ marginBottom: 18, background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", borderRadius: 14, border: "1.5px solid #F59E0B", overflow: "hidden" }}>
+                <div data-tutorial="fixed-initiative" style={{ marginBottom: 18, background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", borderRadius: 14, border: "1.5px solid #F59E0B", overflow: "hidden" }}>
                     <div style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ fontSize: 18 }}>📌</span>
@@ -54,7 +54,7 @@ export default function RoomView({ curRoom, goHome, startMode, unpinInitiative }
                 </div>
             )}
 
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.g800, marginBottom: 10 }}>📋 히스토리 <span style={{ color: C.g400, fontWeight: 400, fontSize: 12 }}>({hist.length}건)</span></div>
+            <div data-tutorial="history-list" style={{ fontSize: 14, fontWeight: 700, color: C.g800, marginBottom: 10 }}>📋 히스토리 <span style={{ color: C.g400, fontWeight: 400, fontSize: 12 }}>({hist.length}건)</span></div>
 
             {hist.length === 0 ? <div style={{ textAlign: "center", padding: "24px 0", color: C.g400, fontSize: 13 }}>아직 생성된 기록이 없습니다</div>
                 : (<div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto", paddingRight: 4 }}>
