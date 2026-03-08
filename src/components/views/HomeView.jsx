@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { C, crd } from '../../utils/constants';
 import { changeUserPassword } from '../../services/supabase';
+import GuideModal from '../ui/GuideModal';
 
 export default function HomeView({
     guideLoad, guide, roomsLoad, rooms,
@@ -9,6 +10,7 @@ export default function HomeView({
 }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [quickModeId, setQuickModeId] = useState(null);
+    const [showGuide, setShowGuide] = useState(false);
     const filteredRooms = rooms.filter(r =>
         (r.name && r.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (r.team && r.team.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -49,6 +51,9 @@ export default function HomeView({
                     <div style={{ fontSize: 32, fontWeight: 800, color: C.p }}>Lalasweet</div>
                     <div style={{ fontSize: 13, color: C.g400, marginTop: 4 }}>가치 기반 성과관리 파트너</div>
                     {!guideLoad && <div style={{ marginTop: 10, fontSize: 12, color: guide ? C.p : C.gold }}>{guide ? `📄 ${guide.name}` : "⚠️ 레벨 가이드 미등록"}</div>}
+                    <button onClick={() => setShowGuide(true)} style={{ marginTop: 12, padding: "7px 18px", borderRadius: 20, border: `1.5px solid ${C.ps}`, background: C.pl, color: C.pd, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                        📖 사용 가이드 보기
+                    </button>
                 </div>
 
                 <div style={{ marginBottom: 24 }}>
@@ -105,6 +110,8 @@ export default function HomeView({
                 </button>
                 <div style={{ textAlign: "center", marginTop: 24, color: C.g300, fontSize: 11 }}>Powered by Multi-AI · 7 Core Values</div>
             </div>
+
+            {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
 
             {quickModeId && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>

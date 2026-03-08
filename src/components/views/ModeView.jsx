@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { C, ML, LEVELS, inp, lbl, bP, bS } from '../../utils/constants';
-import { Shell, Md, GS, CheckBtn, TabToggle } from '../ui/common';
+import { Shell, Md, GS, CheckBtn, TabToggle, StepTutorial } from '../ui/common';
 
 export default function ModeView({
     modeId, curRoom, rooms, step, setStep, loading, err, result,
@@ -124,6 +124,12 @@ export default function ModeView({
                 {step === 0 && (
                     <div>
                         <h3 style={{ fontSize: 15, fontWeight: 600, color: C.g800, marginBottom: 14 }}>📋 기본 정보</h3>
+                        <StepTutorial title="기본 정보 입력 도움말" tips={[
+                            "조직명, 주기, 이름을 정확히 입력하면 더 맞춤화된 이니셔티브가 생성됩니다.",
+                            "주기는 '2026년 상반기', '2026년 1분기' 형식으로 입력하세요.",
+                            "이미 작성한 이니셔티브가 있다면 '기존에 별도로 작성한 이니셔티브가 있나요?'를 체크하면 AI가 가치 기반으로 발전시켜 줍니다.",
+                            "구성원에 핀된 이니셔티브가 있으면 자동으로 불러와집니다."
+                        ]} />
 
                         {/* 고정 이니셔티브 안내 */}
                         {curRoom?.fixed_initiative && useFixed === null && (
@@ -209,6 +215,12 @@ export default function ModeView({
                 {step === 1 && (
                     <div>
                         <h3 style={{ fontSize: 15, fontWeight: 600, color: C.g800, marginBottom: 14 }}>👤 구성원 상세 정보</h3>
+                        <StepTutorial title="구성원 정보 입력 도움말" tips={[
+                            "레벨(L1~L5)은 구성원의 현재 역량 수준입니다. 레벨 가이드가 등록된 경우 해당 기준이 이니셔티브에 반영됩니다.",
+                            "'리더 기대사항'이 가장 중요한 입력 항목입니다. 이번 분기에 기대하는 성과·방향·행동을 구체적으로 적을수록 좋아요.",
+                            "예시: '단순 운영이 아닌 체계화 관점으로 접근 필요', '신규 채널 유효성 검증 우선'",
+                            "Pre-Level을 '예'로 설정하면 Challenge 비중이 높아져 승급 준비에 맞는 이니셔티브가 생성됩니다."
+                        ]} />
                         <div style={{ marginBottom: 10 }}>
                             <label style={lbl}>레벨</label>
                             <div style={{ display: "flex", gap: 4 }}>
@@ -284,6 +296,12 @@ export default function ModeView({
                 {step === 2 && (
                     <div>
                         <h3 style={{ fontSize: 15, fontWeight: 600, color: C.g800, marginBottom: 4 }}>📊 개인 OKR</h3>
+                        <StepTutorial title="개인 OKR 도움말" tips={[
+                            "개인 OKR을 입력하면 이니셔티브가 훨씬 더 정밀하고 현업 밀착형으로 생성됩니다.",
+                            "OKR 형식: Objective(목표) + Key Results(핵심 지표) 형태로 작성하면 좋아요.",
+                            "예시 — O: 채용 프로세스 효율화 / KR1: 채용 리드타임 30% 단축 / KR2: 합격률 20% 향상",
+                            "OKR을 운영하지 않는 경우 '개인 OKR을 운영하지 않습니다' 체크 후 다음 단계로 진행하세요."
+                        ]} />
                         <p style={{ color: C.g400, fontSize: 12, marginBottom: 14 }}>이 구성원의 개인 OKR을 입력해주세요.</p>
                         <CheckBtn checked={noOkr} onClick={() => { setNoOkr(p => !p); if (!noOkr) setOkr(""); }}>
                             개인 OKR을 운영하지 않습니다
@@ -299,6 +317,12 @@ export default function ModeView({
                 {step === 3 && (
                     <div>
                         <h3 style={{ fontSize: 15, fontWeight: 600, color: C.g800, marginBottom: 4 }}>🎯 조직 목표</h3>
+                        <StepTutorial title="조직 목표 입력 도움말" tips={[
+                            "팀 또는 조직 전체의 이번 반기/분기 목표를 입력합니다.",
+                            "목표 문서가 PDF로 있다면 'PDF 등록' 탭에서 파일을 업로드하세요 (4MB 이하).",
+                            "이전에 저장한 조직 목표가 있으면 자동으로 불러오기 버튼이 나타납니다.",
+                            "텍스트로 입력할 때는 번호 목록 형식(1. 목표 / 2. 목표)으로 정리하면 더 좋은 결과가 나와요."
+                        ]} />
                         <p style={{ color: C.g400, fontSize: 12, marginBottom: 14 }}>이번 분기 팀 조직 목표를 입력해주세요.</p>
 
                         <TabToggle value={goalsMode} onChange={v => { setGoalsMode(v); }} options={[{ k: "text", l: "✏️ 직접 입력" }, { k: "pdf", l: "📄 PDF 등록" }]} />
@@ -353,6 +377,12 @@ export default function ModeView({
                 {step === 4 && (
                     <div>
                         <h3 style={{ fontSize: 15, fontWeight: 600, color: C.g800, marginBottom: 14 }}>🚀 최종 확인</h3>
+                        <StepTutorial title="생성 전 체크리스트" tips={[
+                            "입력한 내용을 최종 확인하세요. 이전 버튼으로 돌아가 수정할 수 있습니다.",
+                            "'생성' 버튼을 누르면 AI가 이니셔티브를 작성합니다. 30초~1분 정도 소요될 수 있어요.",
+                            "생성 후 결과가 마음에 들지 않으면 '수정 요청'으로 구체화 수준을 조정할 수 있습니다.",
+                            "결과를 📌 핀으로 고정하면 성과 1on1, 미팅노트 등 다른 모드에서 자동으로 활용됩니다."
+                        ]} />
                         <div style={{ background: C.g50, borderRadius: 12, padding: 16, fontSize: 12.5, lineHeight: 2 }}>
                             <div><span style={{ color: C.g400 }}>조직:</span> {f1.team} · <span style={{ color: C.g400 }}>주기:</span> {f1.period} · <span style={{ color: C.g400 }}>성명:</span> {f1.name}</div>
                             <div><span style={{ color: C.p, fontWeight: 700 }}>{f1.level}</span> · {f1.role} · Pre-Level: {f1.preLevel === "Y" ? "예 ⚡" : "아니오"}</div>
@@ -385,6 +415,12 @@ export default function ModeView({
                 <GS guide={guide} />
                 {step === 0 && (
                     <div>
+                        <StepTutorial title="성과 1on1 아젠다 도움말" tips={[
+                            "GROW 모델(Goal→Reality→Options→Will) 기반의 1on1 아젠다가 생성됩니다.",
+                            "이니셔티브를 핀으로 고정해두면 자동으로 불러와져 매번 입력할 필요가 없어요.",
+                            "'리더의 고민/관점'에 이번 미팅에서 짚고 싶은 내용을 적으면 해당 질문이 아젠다에 포함됩니다.",
+                            "예시: '최근 업무 과부하 우려', 'Challenge 이니셔티브 진행 속도 점검'"
+                        ]} />
                         {/* 고정 이니셔티브 안내 카드 */}
                         {curRoom?.fixed_initiative && (
                             <div style={{ marginBottom: 16, background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", borderRadius: 12, padding: 14, border: "1px solid #F59E0B" }}>
@@ -429,6 +465,12 @@ export default function ModeView({
     if (modeId === 3) {
         return (
             <Shell title="📝 1on1 미팅 노트" onBack={backFn} backLabel={backLbl}>
+                <StepTutorial title="미팅노트 요약 도움말" tips={[
+                    "1on1에서 나눈 대화 내용을 자유롭게 붙여넣으세요. 형식 제한 없이 메모, 녹취 텍스트 모두 가능합니다.",
+                    "최소 20자 이상 입력해야 요약이 가능합니다. 더 많은 내용을 입력할수록 정확한 요약이 됩니다.",
+                    "결과는 Core/Challenge 현황, 역량 피드백, 전체 피드백 3가지 섹션으로 정리됩니다.",
+                    "핀된 이니셔티브가 있으면 AI가 해당 맥락을 참고해 더 맥락에 맞는 요약을 작성합니다."
+                ]} />
                 <div style={{ background: C.pl, borderRadius: 10, padding: 12, marginBottom: 16, border: `1px solid ${C.ps}` }}><div style={{ fontSize: 12, color: C.p, fontWeight: 600 }}>📝 600자 이내 가치 중심 압축</div></div>
                 {/* 고정 이니셔티브 안내 카드 */}
                 {curRoom?.fixed_initiative && (
@@ -450,6 +492,12 @@ export default function ModeView({
     if (modeId === 4) {
         return (
             <Shell title="☕️ 라포 1on1 아젠다" onBack={backFn} backLabel={backLbl}>
+                <StepTutorial title="라포 1on1 도움말" tips={[
+                    "업무 성과보다 '관계'와 '심리적 안전감'에 초점을 맞춘 1on1 아젠다가 생성됩니다.",
+                    "'참고 맥락'에 구성원의 최근 상황(예: 업무 과부하, 팀 갈등, 커리어 고민)을 입력하면 더 개인화된 아젠다가 만들어져요.",
+                    "결과는 Check-in → Value & Strength → Team → Career → Leader Memo 5개 섹션으로 구성됩니다.",
+                    "월 1~2회 정기적으로 진행하면 팀 결속과 구성원 성장에 효과적입니다."
+                ]} />
                 {/* 고정 이니셔티브 안내 카드 */}
                 {curRoom?.fixed_initiative && (
                     <div style={{ marginBottom: 14, background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", borderRadius: 12, padding: 14, border: "1px solid #F59E0B" }}>

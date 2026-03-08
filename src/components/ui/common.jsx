@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { C } from '../../utils/constants';
 
 export function Md({ t }) {
@@ -42,6 +42,28 @@ export function CheckBtn({ checked, onClick, children }) {
             <span style={{ width: 20, height: 20, borderRadius: 6, border: checked ? "none" : `2px solid ${C.g300}`, background: checked ? C.p : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", flexShrink: 0 }}>{checked ? "✓" : ""}</span>
             {children}
         </button>
+    );
+}
+
+export function StepTutorial({ title, tips }) {
+    const [open, setOpen] = useState(true);
+    if (!open) return (
+        <button onClick={() => setOpen(true)} style={{ width: "100%", marginBottom: 14, padding: "8px 14px", borderRadius: 10, border: `1px dashed ${C.ps}`, background: C.pl, color: C.p, fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 6 }}>
+            <span>💡</span><span style={{ flex: 1 }}>{title}</span><span style={{ color: C.g400, fontWeight: 400 }}>도움말 보기</span>
+        </button>
+    );
+    return (
+        <div style={{ marginBottom: 16, background: C.pl, border: `1px solid ${C.ps}`, borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.pd }}>💡 {title}</div>
+                <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: C.g400, fontSize: 12, cursor: "pointer", padding: "0 2px" }}>닫기 ✕</button>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 16 }}>
+                {tips.map((tip, i) => (
+                    <li key={i} style={{ fontSize: 12, color: C.pd, lineHeight: 1.7, marginBottom: 2 }}>{tip}</li>
+                ))}
+            </ul>
+        </div>
     );
 }
 
