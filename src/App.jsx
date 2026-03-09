@@ -64,13 +64,28 @@ function App() {
     window.addEventListener("hashchange", handleHashChange);
     if (!window.location.hash) window.location.hash = "home";
 
-    // Listen for Supabase Auth changes (Google Login callback)
+    // Listen for Supabase Auth changes (Google Login callback ONLY)
+    // We track whether the initial session has been processed to avoid
+    // treating session restoration as a new Google login.
+    let initialSessionHandled = false;
     const { data: { subscription } } = db.supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
+      // Skip INITIAL_SESSION – this fires on page load with any existing session
+      if (event === 'INITIAL_SESSION') {
+        initialSessionHandled = true;
+        return;
+      }
+      // Only handle actual Google OAuth sign-in events
+      // Skip if user is already logged in (regular login) or if there's no session
+      if (event === 'SIGNED_IN' && session?.user && !initialSessionHandled) {
+        // This is a fresh Google OAuth callback (redirect back to app)
         const syncedUser = await db.syncGoogleUser(session.user);
         if (syncedUser) {
           setUser(syncedUser);
         }
+      }
+      // After the first SIGNED_IN, mark as handled to prevent re-triggering
+      if (event === 'SIGNED_IN') {
+        initialSessionHandled = true;
       }
     });
 
