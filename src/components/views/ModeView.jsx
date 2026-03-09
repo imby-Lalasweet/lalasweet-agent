@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { C, ML, LEVELS, inp, lbl, bP, bS } from '../../utils/constants';
 import { Shell, Md, GS, CheckBtn, TabToggle } from '../ui/common';
+import TutorialTip from '../ui/TutorialTip';
 
 export default function ModeView({
     modeId, curRoom, rooms, step, setStep, loading, err, result,
@@ -217,12 +218,18 @@ export default function ModeView({
                         </div>
                         <div style={{ marginBottom: 10 }}>
                             <label style={lbl}>직무 *</label>
-                            <input style={inp} placeholder="마케터, 개발자" value={f1.role} onChange={e => setF1(p => ({ ...p, role: e.target.value }))} />
+                            <input style={inp} placeholder="HRM, 구매/원가, 디자인" value={f1.role} onChange={e => setF1(p => ({ ...p, role: e.target.value }))} />
                         </div>
                         <div style={{ marginBottom: 10 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                                 <label style={{ ...lbl, marginBottom: 0 }}>리더 기대사항 (상세히 작성해주실 수록 좋은 이니셔티브가 생성돼요.) *</label>
                             </div>
+                            <TutorialTip
+                                id="tip_mode1_expectations"
+                                type="tip"
+                                title="기대사항이 구체적일수록 좋아요"
+                                content="리더의 기대사항을 자세히 쓸수록 더 정교한 이니셔티브가 만들어져요. 아래 '최근 기대사항'을 참고해서 클릭으로 불러올 수도 있어요."
+                            />
                             <textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} placeholder="이번 분기 기대 역할/성과" value={f1.expectation} onChange={e => setF1(p => ({ ...p, expectation: e.target.value }))} />
 
                             {/* 최근 기대사항 표시 로직 */}
@@ -399,7 +406,7 @@ export default function ModeView({
                             <div><label style={lbl}>대상자 성명 *</label><input style={inp} placeholder="홍길동" value={f2.name} onChange={e => setF2(p => ({ ...p, name: e.target.value }))} /></div>
                             <div><label style={lbl}>레벨</label><div style={{ display: "flex", gap: 4 }}>{LEVELS.map(l => (<button key={l} onClick={() => setF2(p => ({ ...p, level: l }))} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, background: f2.level === l ? C.p : C.g100, color: f2.level === l ? "#fff" : C.g500 }}>{l}</button>))}</div></div>
                         </div>
-                        <div style={{ marginBottom: 10 }}><label style={lbl}>직무</label><input style={inp} placeholder="마케터" value={f2.role} onChange={e => setF2(p => ({ ...p, role: e.target.value }))} /></div>
+                        <div style={{ marginBottom: 10 }}><label style={lbl}>직무</label><input style={inp} placeholder="HRM, 구매/원가, 디자인" value={f2.role} onChange={e => setF2(p => ({ ...p, role: e.target.value }))} /></div>
                         <div style={{ marginBottom: 10 }}><label style={lbl}>주요 이니셔티브 *</label><textarea style={{ ...inp, minHeight: 100, resize: "vertical" }} placeholder="핵심 과제 1~2개" value={f2.initiatives} onChange={e => setF2(p => ({ ...p, initiatives: e.target.value }))} /></div>
                         <div><label style={lbl}>리더의 고민/관점</label><textarea style={{ ...inp, minHeight: 70, resize: "vertical" }} placeholder="이번 미팅에서 확인/피드백하고 싶은 부분" value={f2.concern} onChange={e => setF2(p => ({ ...p, concern: e.target.value }))} /></div>
                         <div style={{ display: "flex", gap: 10, marginTop: 20 }}><button onClick={() => setStep(1)} disabled={!(f2.name && f2.initiatives.length > 10)} style={bP(!!(f2.name && f2.initiatives.length > 10))}>다음 →</button></div>
@@ -461,7 +468,7 @@ export default function ModeView({
                     </div>
                 )}
                 <div style={{ marginBottom: 10 }}><label style={lbl}>구성원 이름 *</label><input style={inp} placeholder="홍길동" value={f4.name} onChange={e => setF4(p => ({ ...p, name: e.target.value }))} /></div>
-                <div style={{ marginBottom: 10 }}><label style={lbl}>직무</label><input style={inp} placeholder="마케터" value={f4.role} onChange={e => setF4(p => ({ ...p, role: e.target.value }))} /></div>
+                <div style={{ marginBottom: 10 }}><label style={lbl}>직무</label><input style={inp} placeholder="HRM, 구매/원가, 디자인" value={f4.role} onChange={e => setF4(p => ({ ...p, role: e.target.value }))} /></div>
                 <div><label style={lbl}>참고 맥락 (선택)</label><textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} placeholder="최근 상황, 특이사항 등" value={f4.context} onChange={e => setF4(p => ({ ...p, context: e.target.value }))} /></div>
                 <div style={{ display: "flex", gap: 10, marginTop: 20 }}><button onClick={() => { setStep(1); gen4(); }} disabled={!f4.name} style={bP(!!f4.name)}>☕️ 생성</button></div>
             </Shell>

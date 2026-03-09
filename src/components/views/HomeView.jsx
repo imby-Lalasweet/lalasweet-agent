@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { C, crd } from '../../utils/constants';
 import { changeUserPassword } from '../../services/supabase';
+import TutorialTip from '../ui/TutorialTip';
 
 export default function HomeView({
     guideLoad, guide, roomsLoad, rooms,
@@ -52,6 +53,12 @@ export default function HomeView({
                 </div>
 
                 <div style={{ marginBottom: 24 }}>
+                    <TutorialTip
+                        id="tut_home_add_member"
+                        type="tutorial"
+                        title="구성원을 추가해보세요"
+                        content="'+ 새 구성원' 버튼을 눌러 팀원을 등록하고, 이니셔티브 설정 · 1on1 아젠다 · 미팅 노트를 AI와 함께 준비해보세요."
+                    />
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                         <div style={{ fontSize: 15, fontWeight: 700, color: C.g800 }}>👥 내 구성원</div>
                         <button data-tutorial="new-member" onClick={() => { setCurRoom(null); startMode(1, null); }} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: C.p, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>+ 새 구성원</button>
@@ -90,6 +97,12 @@ export default function HomeView({
                 </div>
 
                 <div data-tutorial="quick-actions" style={{ marginBottom: 24 }}>
+                    <TutorialTip
+                        id="tip_home_quick_action"
+                        type="tip"
+                        title="빠른 실행 활용하기"
+                        content="특정 구성원 없이도 이니셔티브 · 1on1 · 미팅 노트를 바로 시작할 수 있어요. 구성원 선택 후 결과가 저장됩니다."
+                    />
                     <div style={{ fontSize: 15, fontWeight: 700, color: C.g800, marginBottom: 12 }}>⚡ 빠른 실행</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         {[{ id: 1, icon: "🚀", t: "이니셔티브" }, { id: 2, icon: "📅", t: "성과 1on1" }, { id: 3, icon: "📝", t: "미팅 노트" }, { id: 4, icon: "☕️", t: "라포 1on1" }].map(m => (

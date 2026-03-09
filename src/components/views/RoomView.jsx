@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { C } from '../../utils/constants';
 import { Shell, Md } from '../ui/common';
+import TutorialTip from '../ui/TutorialTip';
 
 export default function RoomView({ curRoom, goHome, startMode, unpinInitiative }) {
     const [expandIdx, setExpandIdx] = useState(null);
@@ -18,6 +19,12 @@ export default function RoomView({ curRoom, goHome, startMode, unpinInitiative }
 
             <div style={{ fontSize: 11, color: C.g400, marginBottom: 16 }}>마지막 수정: {new Date(curRoom.updatedAt).toLocaleString("ko-KR")}</div>
 
+            <TutorialTip
+                id="tut_room_modes"
+                type="tutorial"
+                title="4가지 모드를 활용해보세요"
+                content="🚀 이니셔티브로 목표를 설계하고, 📅 성과 1on1으로 아젠다를 준비하고, 📝 미팅 노트로 기록하고, ☕️ 라포 1on1으로 관계를 챙겨보세요."
+            />
             <div data-tutorial="mode-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
                 {[{ id: 1, icon: "🚀", t: "이니셔티브" }, { id: 2, icon: "📅", t: "성과 1on1" }, { id: 3, icon: "📝", t: "미팅 노트" }, { id: 4, icon: "☕️", t: "라포 1on1" }].map(m => (
                     <button key={m.id} onClick={() => startMode(m.id, curRoom)} style={{ padding: "12px", borderRadius: 10, border: `1px solid ${C.g200}`, background: C.g50, cursor: "pointer", textAlign: "center" }}>
