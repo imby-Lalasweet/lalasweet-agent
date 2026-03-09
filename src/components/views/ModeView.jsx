@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { C, ML, LEVELS, inp, lbl, bP, bS } from '../../utils/constants';
 import { Shell, Md, GS, CheckBtn, TabToggle } from '../ui/common';
+import { TutorialTip } from '../ui/Tutorial';
 
 export default function ModeView({
     modeId, curRoom, rooms, step, setStep, loading, err, result,
@@ -117,9 +118,11 @@ export default function ModeView({
         return (
             <Shell title="🚀 이니셔티브 설정" onBack={backFn} backLabel={backLbl}>
                 <div data-tutorial="guide-status"><GS guide={guide} /></div>
+                <TutorialTip id="guide-status" />
                 <div data-tutorial="step-progress" style={{ display: "flex", gap: 4, marginBottom: 20 }}>
                     {steps1.map((s, i) => (<div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= step ? C.p : C.g200 }} />))}
                 </div>
+                <TutorialTip id="step-progress" />
 
                 {step === 0 && (
                     <div>
