@@ -69,7 +69,7 @@ export default function LoginView({ onLogin }) {
             }}>
                 <div style={{ textAlign: "center", marginBottom: 32 }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: C.p, marginBottom: 4 }}>Lalasweet</div>
-                    <div style={{ fontSize: 13, color: C.g400 }}>가치 기반 성과관리 파트너</div>
+                    <div style={{ fontSize: 13, color: C.g400 }}>성과 관리 파트너</div>
                 </div>
 
                 <form onSubmit={handleSubmit}>

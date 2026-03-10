@@ -48,7 +48,7 @@ export default function HomeView({
                         </div>
                     </div>
                     <div style={{ fontSize: 32, fontWeight: 800, color: C.p }}>Lalasweet</div>
-                    <div style={{ fontSize: 13, color: C.g400, marginTop: 4 }}>가치 기반 성과관리 파트너</div>
+                    <div style={{ fontSize: 13, color: C.g400, marginTop: 4 }}>성과 관리 파트너</div>
                     {!guideLoad && <div style={{ marginTop: 10, fontSize: 12, color: guide ? C.p : C.gold }}>{guide ? `📄 ${guide.name}` : "⚠️ 레벨 가이드 미등록"}</div>}
                 </div>
 
