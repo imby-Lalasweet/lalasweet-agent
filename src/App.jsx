@@ -65,29 +65,28 @@ function App() {
     if (!window.location.hash) window.location.hash = "home";
 
     // Listen for Supabase Auth changes (Google Login callback ONLY)
-    // We track whether the initial session has been processed to avoid
-    // treating session restoration as a new Google login.
-    let initialSessionHandled = false;
-    const { data: { subscription } } = db.supabase.auth.onAuthStateChange(async (event, session) => {
-      // Skip INITIAL_SESSION – this fires on page load with any existing session
-      if (event === 'INITIAL_SESSION') {
-        initialSessionHandled = true;
-        return;
-      }
-      // Only handle actual Google OAuth sign-in events
-      // Skip if user is already logged in (regular login) or if there's no session
-      if (event === 'SIGNED_IN' && session?.user && !initialSessionHandled) {
-        // This is a fresh Google OAuth callback (redirect back to app)
-        const syncedUser = await db.syncGoogleUser(session.user);
-        if (syncedUser) {
-          setUser(syncedUser);
+    let subscription = null;
+    if (db.supabase) {
+      let initialDone = false;
+      const { data } = db.supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'INITIAL_SESSION') {
+          initialDone = true;
+          return;
         }
-      }
-      // After the first SIGNED_IN, mark as handled to prevent re-triggering
-      if (event === 'SIGNED_IN') {
-        initialSessionHandled = true;
-      }
-    });
+        // Handle Google OAuth sign-in: only after INITIAL_SESSION has fired
+        // and user is not already logged in via localStorage
+        if (event === 'SIGNED_IN' && session?.user && initialDone) {
+          const saved = localStorage.getItem("lalasweet_user");
+          if (!saved) {
+            const syncedUser = await db.syncGoogleUser(session.user);
+            if (syncedUser) {
+              setUser(syncedUser);
+            }
+          }
+        }
+      });
+      subscription = data.subscription;
+    }
 
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
