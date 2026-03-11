@@ -4,6 +4,7 @@ import HomeView from "./components/views/HomeView";
 import RoomView from "./components/views/RoomView";
 import ModeView from "./components/views/ModeView";
 import AdminView from "./components/views/AdminView";
+import SharedView from "./components/views/SharedView";
 import Tutorial from "./components/ui/Tutorial";
 
 import { SYS, ML, AI_MODELS } from "./utils/constants";
@@ -45,21 +46,35 @@ function App() {
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
-  const [view, _setView] = useState(() => window.location.hash.replace("#", "") || "home");
+  const [view, _setView] = useState(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash.startsWith("share-")) return "share";
+    return hash || "home";
+  });
+  const [shareId, setShareId] = useState(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash.startsWith("share-")) return hash.replace("share-", "");
+    return null;
+  });
 
   const setView = (v) => {
     _setView(v);
-    window.location.hash = v;
+    if (v === "share" && shareId) {
+      window.location.hash = `share-${shareId}`;
+    } else {
+      window.location.hash = v;
+    }
   };
 
   useEffect(() => {
-    if (user) localStorage.setItem("lalasweet_user", JSON.stringify(user));
-    else localStorage.removeItem("lalasweet_user");
-  }, [user]);
-
-  useEffect(() => {
     const handleHashChange = () => {
-      _setView(window.location.hash.replace("#", "") || "home");
+      const hash = window.location.hash.replace("#", "");
+      if (hash.startsWith("share-")) {
+        setShareId(hash.replace("share-", ""));
+        _setView("share");
+      } else {
+        _setView(hash || "home");
+      }
     };
     window.addEventListener("hashchange", handleHashChange);
     if (!window.location.hash) window.location.hash = "home";
@@ -68,7 +83,7 @@ function App() {
     // We track whether the initial session has been processed to avoid
     // treating session restoration as a new Google login.
     let initialSessionHandled = false;
-    const { data: { subscription } } = db.supabase.auth.onAuthStateChange(async (event, session) => {
+    const authSub = db.supabase?.auth?.onAuthStateChange(async (event, session) => {
       // Skip INITIAL_SESSION – this fires on page load with any existing session
       if (event === 'INITIAL_SESSION') {
         initialSessionHandled = true;
@@ -91,7 +106,9 @@ function App() {
 
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
-      subscription?.unsubscribe();
+      if (authSub?.data?.subscription) {
+        authSub.data.subscription.unsubscribe();
+      }
     }
   }, []);
   const [guide, setGuide] = useState(null);
@@ -217,9 +234,9 @@ function App() {
     try {
       // Avoid inserting empty room
       const savedRoom = await saveRoomFlow(room);
-      await db.addRoomHistory(savedRoom.id, entry);
+      const savedHistory = await db.addRoomHistory(savedRoom.id, entry);
 
-      const newHistory = [{ ...entry, ts: entry.ts || Date.now() }, ...(savedRoom.history || [])];
+      const newHistory = [savedHistory, ...(savedRoom.history || [])];
       const updatedRoom = { ...savedRoom, history: newHistory };
 
       setCurRoom(updatedRoom);
@@ -231,6 +248,40 @@ function App() {
     } catch (e) {
       console.error("Add history error", e);
     }
+  };
+
+  const importSharedHistory = async (sharedData) => {
+    if (!sharedData || !sharedData.rooms) return;
+
+    // Check if room with same name exists for current user
+    let targetRoom = rooms.find(r => r.name === sharedData.rooms.name);
+
+    // If not, create a new one based on the shared room's metadata
+    if (!targetRoom) {
+      targetRoom = createRoom(
+        sharedData.rooms.team || "",
+        sharedData.rooms.name,
+        sharedData.rooms.level || "L1",
+        sharedData.rooms.role || ""
+      );
+    }
+
+    const newEntry = {
+      mode: sharedData.mode,
+      modeLabel: sharedData.mode_label,
+      result: sharedData.result,
+      info: sharedData.info || {},
+      ts: Date.now()
+    };
+
+    await addHistoryFlow(targetRoom, newEntry);
+
+    // Auto-navigate to that room
+    const latestRoom = rooms.find(r => r.name === targetRoom.name) || targetRoom; // Fallback 
+    setCurRoom(latestRoom); // addHistoryFlow already updates curRoom and rooms state
+    setShareId(null);
+    setView("room");
+    window.showToast("히스토리가 내 공간에 복사되었습니다.");
   };
 
   // Level Guide
@@ -529,6 +580,8 @@ function App() {
 
   if (view === "home") {
     content = <HomeView guideLoad={guideLoad} guide={guide} roomsLoad={roomsLoad} rooms={rooms} setCurRoom={setCurRoom} startMode={startMode} deleteRoom={deleteRoomFlow} setView={setView} user={user} onLogout={handleLogout} />;
+  } else if (view === "share") {
+    content = <SharedView shareId={shareId} goHome={goHome} importSharedHistory={importSharedHistory} />;
   } else if (view === "room") {
     if (curRoom) content = <RoomView curRoom={curRoom} goHome={goHome} startMode={startMode} unpinInitiative={unpinInitiative} />;
     else setTimeout(() => setView("home"), 0);
