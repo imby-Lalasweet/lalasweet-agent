@@ -18,7 +18,7 @@ export const supabase = supabaseUrl && supabaseAnonKey
       storage: memoryStorage,
       persistSession: false,
       autoRefreshToken: false,
-      detectSessionInUrl: false,
+      detectSessionInUrl: true,
       multiTab: false,
     },
   })
