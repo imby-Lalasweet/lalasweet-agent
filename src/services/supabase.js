@@ -7,7 +7,8 @@ export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storageKey: 'lalasweet-auth-token',
-      persistSession: true,
+      persistSession: false, // Turn off so we don't get Invalid Refresh Token errors for dummy passwords
+      autoRefreshToken: false,
     },
   })
   : null;
@@ -225,16 +226,35 @@ export const deleteRoom = async (id) => {
 
 export const addRoomHistory = async (roomId, entry) => {
   if (!supabase) return;
-  const { error } = await supabase.from('histories').insert({
+  const { data, error } = await supabase.from('histories').insert({
     room_id: roomId,
     mode: entry.mode,
     mode_label: entry.modeLabel,
     result: entry.result,
     info: entry.info || {},
     ts: entry.ts || Date.now()
-  });
+  }).select().single();
   if (error) throw error;
-  return entry;
+  return { ...entry, id: data.id };
+};
+
+export const getHistoryWithRoom = async (historyId) => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('histories')
+    .select(`
+      *,
+      rooms (
+        team,
+        name,
+        level,
+        role
+      )
+    `)
+    .eq('id', historyId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 };
 
 // ====== Organization Goals (per-user) ======

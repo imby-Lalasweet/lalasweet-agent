@@ -87,7 +87,13 @@ function App() {
       // Skip INITIAL_SESSION – this fires on page load with any existing session
       if (event === 'INITIAL_SESSION') {
         initialSessionHandled = true;
+        // If there's an error string in the URL hash, we might need to purge session but the SDK usually handles it.
         return;
+      }
+      if (event === 'SIGNED_OUT') {
+        // If the refresh token is invalid, Supabase logs out the user
+        setUser(null);
+        localStorage.removeItem("lalasweet_user");
       }
       // Only handle actual Google OAuth sign-in events
       // Skip if user is already logged in (regular login) or if there's no session
@@ -96,6 +102,7 @@ function App() {
         const syncedUser = await db.syncGoogleUser(session.user);
         if (syncedUser) {
           setUser(syncedUser);
+          localStorage.setItem("lalasweet_user", JSON.stringify(syncedUser));
         }
       }
       // After the first SIGNED_IN, mark as handled to prevent re-triggering
