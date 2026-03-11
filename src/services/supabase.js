@@ -3,12 +3,23 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// A dummy storage object to use instead of localStorage for Supabase Auth
+// since we don't rely on it and it causes lock issues in some browsers.
+const memoryStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {}
+};
+
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storageKey: 'lalasweet-auth-token',
-      persistSession: false, // Turn off so we don't get Invalid Refresh Token errors for dummy passwords
+      storage: memoryStorage,
+      persistSession: false,
       autoRefreshToken: false,
+      detectSessionInUrl: false,
+      multiTab: false,
     },
   })
   : null;
