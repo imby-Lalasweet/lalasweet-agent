@@ -3,6 +3,90 @@ import { C, crd, inp, bS } from '../../utils/constants';
 import { Shell, Md } from '../ui/common';
 import { getAllUsers, deleteUser, resetUserPassword } from '../../services/supabase';
 
+// ──── helper: 텍스트 저장 탭 UI ────
+const TextTab = ({ icon, title, desc, hint, hintColor, placeholder, text, setText, saving, msg, setMsg, onSave, onDelete, existing, updatedAt, accordionInfo }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+    <div>
+        <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 18 }}>{existing ? '✅' : icon}</span>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>
+                    {title} {existing ? '(등록됨)' : '(미등록)'}
+                </div>
+            </div>
+            <div style={{ fontSize: 12, color: C.g400, marginBottom: 8, lineHeight: 1.5 }}>{desc}</div>
+            {hint && (
+                <div style={{ fontSize: 11, color: hintColor || '#7C3AED', background: `${hintColor || '#7C3AED'}10`, padding: '8px 12px', borderRadius: 8, lineHeight: 1.5, fontWeight: 600, marginBottom: 8 }}>
+                    {hint}
+                </div>
+            )}
+            {existing && updatedAt && (
+                <div style={{ fontSize: 11, color: C.g400, marginBottom: 8 }}>
+                    최종 수정: {new Date(updatedAt).toLocaleString('ko-KR')}
+                </div>
+            )}
+        </div>
+        <textarea
+            value={text}
+            onChange={e => { setText(e.target.value); setMsg(''); }}
+            placeholder={placeholder}
+            style={{ ...inp, minHeight: 250, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, fontSize: 13 }}
+        />
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button
+                onClick={onSave}
+                disabled={saving || !text.trim()}
+                style={{
+                    flex: 2, padding: '12px 0', borderRadius: 12, border: 'none',
+                    fontSize: 14, fontWeight: 700, cursor: text.trim() ? 'pointer' : 'not-allowed',
+                    background: text.trim() ? C.p : C.g200,
+                    color: text.trim() ? '#fff' : C.g400
+                }}
+            >
+                {saving ? '저장 중...' : '💾 저장'}
+            </button>
+            {existing && (
+                <button onClick={onDelete} style={{ ...bS, flex: 1, color: C.red }}>🗑️ 삭제</button>
+            )}
+        </div>
+        {msg && <div style={{ textAlign: 'center', color: C.green, fontSize: 12, marginTop: 10, fontWeight: 600 }}>{msg}</div>}
+
+        {accordionInfo && (
+            <div style={{ marginTop: 24, background: C.g50, borderRadius: 12, overflow: 'hidden' }}>
+                <button 
+                    onClick={() => setIsOpen(!isOpen)}
+                    style={{ width: '100%', padding: '14px 16px', fontSize: 13, fontWeight: 700, color: C.g700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', border: 'none', textAlign: 'left' }}
+                >
+                    <span>💡 이 내용은 AI에 어떻게 반영되나요?</span>
+                    <span style={{ fontSize: 12, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+                </button>
+                {isOpen && (
+                    <div style={{ padding: '0 16px 16px 16px', fontSize: 13, color: C.g600, lineHeight: 1.6 }}>
+                        <div style={{ padding: '12px 14px', background: C.w, borderRadius: 8, border: `1px solid ${C.g200}` }}>
+                            <div style={{ fontWeight: 700, color: C.p, marginBottom: 8, fontSize: 12 }}>적용 순위: {accordionInfo.rank} / 6</div>
+                            <div style={{ marginBottom: 10, whiteSpace: 'pre-line' }}>{accordionInfo.desc}</div>
+                            {accordionInfo.table && (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 8 }}>
+                                    <tbody>
+                                        {accordionInfo.table.map((row, idx) => (
+                                            <tr key={idx} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${C.g100}` }}>
+                                                <td style={{ padding: '8px', fontWeight: 600, color: C.g700, width: '30%', verticalAlign: 'top' }}>{row.label}</td>
+                                                <td style={{ padding: '8px', color: C.g600 }}>{row.value}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
+    </div>
+);
+};
+
 export default function AdminView({
     adminAuth, setAdminAuth, apw, setApw, pwErr, setPwErr, loadLogs,
     guide, fileRef, deleteGuide, handleFile, err,
@@ -62,89 +146,7 @@ export default function AdminView({
         } catch (e) { console.error("Reset password error", e); }
     };
 
-    // ──── helper: 텍스트 저장 탭 UI ────
-    const TextTab = ({ icon, title, desc, hint, hintColor, placeholder, text, setText, saving, msg, setMsg, onSave, onDelete, existing, updatedAt, accordionInfo }) => {
-        const [isOpen, setIsOpen] = useState(false);
-        return (
-        <div>
-            <div style={{ marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <span style={{ fontSize: 18 }}>{existing ? '✅' : icon}</span>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.g800 }}>
-                        {title} {existing ? '(등록됨)' : '(미등록)'}
-                    </div>
-                </div>
-                <div style={{ fontSize: 12, color: C.g400, marginBottom: 8, lineHeight: 1.5 }}>{desc}</div>
-                {hint && (
-                    <div style={{ fontSize: 11, color: hintColor || '#7C3AED', background: `${hintColor || '#7C3AED'}10`, padding: '8px 12px', borderRadius: 8, lineHeight: 1.5, fontWeight: 600, marginBottom: 8 }}>
-                        {hint}
-                    </div>
-                )}
-                {existing && updatedAt && (
-                    <div style={{ fontSize: 11, color: C.g400, marginBottom: 8 }}>
-                        최종 수정: {new Date(updatedAt).toLocaleString('ko-KR')}
-                    </div>
-                )}
-            </div>
-            <textarea
-                value={text}
-                onChange={e => { setText(e.target.value); setMsg(''); }}
-                placeholder={placeholder}
-                style={{ ...inp, minHeight: 250, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, fontSize: 13 }}
-            />
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button
-                    onClick={onSave}
-                    disabled={saving || !text.trim()}
-                    style={{
-                        flex: 2, padding: '12px 0', borderRadius: 12, border: 'none',
-                        fontSize: 14, fontWeight: 700, cursor: text.trim() ? 'pointer' : 'not-allowed',
-                        background: text.trim() ? C.p : C.g200,
-                        color: text.trim() ? '#fff' : C.g400
-                    }}
-                >
-                    {saving ? '저장 중...' : '💾 저장'}
-                </button>
-                {existing && (
-                    <button onClick={onDelete} style={{ ...bS, flex: 1, color: C.red }}>🗑️ 삭제</button>
-                )}
-            </div>
-            {msg && <div style={{ textAlign: 'center', color: C.green, fontSize: 12, marginTop: 10, fontWeight: 600 }}>{msg}</div>}
 
-            {accordionInfo && (
-                <div style={{ marginTop: 24, background: C.g50, borderRadius: 12, overflow: 'hidden' }}>
-                    <button 
-                        onClick={() => setIsOpen(!isOpen)}
-                        style={{ width: '100%', padding: '14px 16px', fontSize: 13, fontWeight: 700, color: C.g700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', border: 'none', textAlign: 'left' }}
-                    >
-                        <span>💡 이 내용은 AI에 어떻게 반영되나요?</span>
-                        <span style={{ fontSize: 12, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
-                    </button>
-                    {isOpen && (
-                        <div style={{ padding: '0 16px 16px 16px', fontSize: 13, color: C.g600, lineHeight: 1.6 }}>
-                            <div style={{ padding: '12px 14px', background: C.w, borderRadius: 8, border: `1px solid ${C.g200}` }}>
-                                <div style={{ fontWeight: 700, color: C.p, marginBottom: 8, fontSize: 12 }}>적용 순위: {accordionInfo.rank} / 6</div>
-                                <div style={{ marginBottom: 10, whiteSpace: 'pre-line' }}>{accordionInfo.desc}</div>
-                                {accordionInfo.table && (
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 8 }}>
-                                        <tbody>
-                                            {accordionInfo.table.map((row, idx) => (
-                                                <tr key={idx} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${C.g100}` }}>
-                                                    <td style={{ padding: '8px', fontWeight: 600, color: C.g700, width: '30%', verticalAlign: 'top' }}>{row.label}</td>
-                                                    <td style={{ padding: '8px', color: C.g600 }}>{row.value}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-    };
 
     if (!adminAuth) {
         return (
