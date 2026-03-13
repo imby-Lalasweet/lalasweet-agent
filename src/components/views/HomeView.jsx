@@ -85,7 +85,7 @@ export default function HomeView({
                                                 <div style={{ fontSize: 11, color: C.g400, marginTop: 3 }}>
                                                     {r.level && <span style={{ color: C.p, fontWeight: 600, marginRight: 6 }}>{r.level}</span>}
                                                     {r.role && <span style={{ marginRight: 8 }}>{r.role}</span>}
-                                                    {new Date(r.updatedAt).toLocaleDateString("ko-KR")} 수정
+                                                    {new Date(r.updated_at).toLocaleDateString("ko-KR")} 수정
                                                     {r.history?.length > 0 && <span style={{ marginLeft: 6 }}>· {r.history.length}건</span>}
                                                 </div>
                                             </button>

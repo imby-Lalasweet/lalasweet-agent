@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.46",
+    "@playwright/test": "^1.58.2",
     "@supabase/supabase-js": "^2.97.0",
     "ai": "^6.0.97",
     "lucide-react": "^0.575.0",
+    "pg": "^8.20.0",
+    "puppeteer": "^24.38.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.0"

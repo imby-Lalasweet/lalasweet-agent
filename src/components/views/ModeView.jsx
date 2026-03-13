@@ -6,7 +6,7 @@ import TutorialTip from '../ui/TutorialTip';
 export default function ModeView({
     modeId, curRoom, rooms, step, setStep, loading, err, result,
     modTxt, setModTxt, handleModify, startMode, goHome, goRoom,
-    guide,
+    guide, orgOkr,
     f1, setF1, hasExisting, setHasExisting, existingInit, setExistingInit, applyDirect,
     noOkr, setNoOkr, okr, setOkr, checkGoals,
     goalsMode, setGoalsMode, goalsChecked, savedGoals, goals, setGoals,
@@ -20,6 +20,7 @@ export default function ModeView({
     const [specificity, setSpecificity] = useState("100%");
     const [pinned, setPinned] = useState(false);
     const [useFixed, setUseFixed] = useState(null); // null = not decided, true = use fixed, false = enter new
+    const [useAdminOkr, setUseAdminOkr] = useState(null); // null = not decided, true = use admin OKR, false = enter manually
     const backFn = curRoom ? goRoom : goHome;
     const backLbl = curRoom ? `${curRoom.name}` : "홈으로";
     const isResult1 = modeId === 1 && (step === 99 || step >= 5);
@@ -288,20 +289,105 @@ export default function ModeView({
                     </div>
                 )}
 
-                {step === 2 && (
-                    <div>
-                        <h3 style={{ fontSize: 15, fontWeight: 600, color: C.g800, marginBottom: 4 }}>📊 개인 OKR</h3>
-                        <p style={{ color: C.g400, fontSize: 12, marginBottom: 14 }}>이 구성원의 개인 OKR을 입력해주세요.</p>
-                        <CheckBtn checked={noOkr} onClick={() => { setNoOkr(p => !p); if (!noOkr) setOkr(""); }}>
-                            개인 OKR을 운영하지 않습니다
-                        </CheckBtn>
-                        {!noOkr && <textarea style={{ ...inp, minHeight: 140, resize: "vertical", lineHeight: 1.7, marginTop: 12 }} placeholder={"O: Objective\n- KR1: Key Result 1"} value={okr} onChange={e => setOkr(e.target.value)} />}
-                        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-                            <button onClick={() => setStep(1)} style={bS}>← 이전</button>
-                            <button onClick={() => { setStep(3); checkGoals(f1.team); }} disabled={!(noOkr || okr.trim().length > 10)} style={bP(!!(noOkr || okr.trim().length > 10))}>다음 →</button>
+                {step === 2 && (() => {
+                    // 관리자 DB에서 이름으로 개인 OKR 검색
+                    let matchedOkr = null;
+                    if (orgOkr?.content && f1.name?.trim()) {
+                        const name = f1.name.trim();
+                        const text = orgOkr.content;
+                        if (text.includes(name)) {
+                            // 이름이 포함된 줄부터 다음 사람 시작 전까지 추출
+                            const lines = text.split('\n');
+                            const nameIdx = lines.findIndex(l => l.includes(name));
+                            if (nameIdx >= 0) {
+                                let endIdx = lines.length;
+                                for (let i = nameIdx + 1; i < lines.length; i++) {
+                                    const line = lines[i].trim();
+                                    // 새로운 사람 시작 패턴: [이름], 이름 -, 빈줄 후 [
+                                    if (line.match(/^\[/) && !lines[nameIdx].trim().startsWith('[')) {
+                                        endIdx = i; break;
+                                    }
+                                    if (i > nameIdx && line.match(/^\[/) && i !== nameIdx) {
+                                        endIdx = i; break;
+                                    }
+                                    // 빈 줄 뒤에 다시 헤더가 나오면 끊기
+                                    if (line === '' && i + 1 < lines.length && lines[i + 1].trim().match(/^\[/)) {
+                                        endIdx = i; break;
+                                    }
+                                }
+                                matchedOkr = lines.slice(nameIdx, endIdx).join('\n').trim();
+                            }
+                            // 섹션 추출 실패 시 이름 주변 10줄 보여주기
+                            if (!matchedOkr) {
+                                const allLines = text.split('\n');
+                                const idx = allLines.findIndex(l => l.includes(name));
+                                if (idx >= 0) {
+                                    matchedOkr = allLines.slice(Math.max(0, idx), Math.min(allLines.length, idx + 10)).join('\n').trim();
+                                }
+                            }
+                        }
+                    }
+
+                    return (
+                        <div>
+                            <h3 style={{ fontSize: 15, fontWeight: 600, color: C.g800, marginBottom: 4 }}>📊 개인 OKR</h3>
+                            <p style={{ color: C.g400, fontSize: 12, marginBottom: 14 }}>이 구성원의 개인 OKR을 입력해주세요.</p>
+
+                            {/* 매칭된 OKR이 있고 아직 선택 안 했을 때 */}
+                            {matchedOkr && useAdminOkr === null && (
+                                <div style={{ marginBottom: 16, background: 'linear-gradient(135deg, #EEF2FF, #F5F3FF)', borderRadius: 14, padding: 16, border: '1.5px solid #6366F1' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                        <span style={{ fontSize: 18 }}>🎯</span>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#4F46E5' }}>등록된 개인 OKR이 있습니다</div>
+                                    </div>
+                                    <div style={{ fontSize: 11, color: C.g500, marginBottom: 8 }}>
+                                        관리자가 등록한 <strong>{f1.name}</strong>님의 OKR:
+                                    </div>
+                                    <div style={{ background: 'rgba(255,255,255,0.8)', borderRadius: 10, padding: 12, fontSize: 12.5, color: C.g700, lineHeight: 1.6, maxHeight: 180, overflowY: 'auto', whiteSpace: 'pre-wrap', marginBottom: 14 }}>
+                                        {matchedOkr}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        <button
+                                            onClick={() => { setUseAdminOkr(true); setOkr(matchedOkr); setNoOkr(false); }}
+                                            style={{ padding: '13px 16px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'left', boxShadow: '0 2px 10px rgba(99,102,241,0.3)' }}
+                                        >
+                                            <div>🎯 이 OKR로 진행하기</div>
+                                            <div style={{ fontSize: 11, fontWeight: 400, marginTop: 3, opacity: 0.9 }}>등록된 개인 OKR을 그대로 사용합니다</div>
+                                        </button>
+                                        <button
+                                            onClick={() => setUseAdminOkr(false)}
+                                            style={{ padding: '13px 16px', borderRadius: 12, border: `1.5px solid ${C.g200}`, background: C.g50, color: C.g600, fontSize: 13, fontWeight: 700, cursor: 'pointer', textAlign: 'left' }}
+                                        >
+                                            <div>✏️ 직접 입력하기</div>
+                                            <div style={{ fontSize: 11, fontWeight: 400, marginTop: 3, opacity: 0.7 }}>별도로 OKR을 입력합니다</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 선택 완료 후 또는 매칭 없을 때 수동 입력 표시 */}
+                            {(!matchedOkr || useAdminOkr !== null) && (
+                                <>
+                                    {useAdminOkr === true && (
+                                        <div style={{ background: '#EEF2FF', borderRadius: 10, padding: 12, marginBottom: 12, border: '1px solid #C7D2FE' }}>
+                                            <div style={{ fontSize: 12, color: '#4F46E5', fontWeight: 600 }}>✅ 등록된 OKR 적용됨</div>
+                                            <div style={{ fontSize: 11, color: C.g500, marginTop: 4 }}>아래에서 내용을 확인/수정할 수 있습니다</div>
+                                        </div>
+                                    )}
+                                    <CheckBtn checked={noOkr} onClick={() => { setNoOkr(p => !p); if (!noOkr) setOkr(""); }}>
+                                        개인 OKR을 운영하지 않습니다
+                                    </CheckBtn>
+                                    {!noOkr && <textarea style={{ ...inp, minHeight: 140, resize: "vertical", lineHeight: 1.7, marginTop: 12 }} placeholder={"O: Objective\n- KR1: Key Result 1"} value={okr} onChange={e => setOkr(e.target.value)} />}
+                                </>
+                            )}
+
+                            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                                <button onClick={() => { setStep(1); setUseAdminOkr(null); }} style={bS}>← 이전</button>
+                                <button onClick={() => { setStep(3); checkGoals(f1.team); }} disabled={!(noOkr || okr.trim().length > 10)} style={bP(!!(noOkr || okr.trim().length > 10))}>다음 →</button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {step === 3 && (
                     <div>

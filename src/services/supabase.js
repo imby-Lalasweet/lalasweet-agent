@@ -4,20 +4,50 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // A dummy storage object to use instead of localStorage for Supabase Auth
-// since we don't rely on it and it causes lock issues in some browsers.
+// since we don't rely on it and it causes lock issues in some browsers (e.g. Comet).
 const memoryStorage = {
-  getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {}
+  data: {},
+  getItem: (key) => memoryStorage.data[key] || null,
+  setItem: (key, value) => { memoryStorage.data[key] = value; },
+  removeItem: (key) => { delete memoryStorage.data[key]; }
 };
 
+// Safe storage wrapper to prevent crash on Comet/Incognito
+const safeStorage = {
+  getItem: (key) => {
+    try {
+      return window.localStorage.getItem(key) || memoryStorage.getItem(key);
+    } catch (e) {
+      console.warn("localStorage access denied for getItem", e);
+      return memoryStorage.getItem(key);
+    }
+  },
+  setItem: (key, value) => {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn("localStorage access denied for setItem", e);
+    }
+    memoryStorage.setItem(key, value);
+  },
+  removeItem: (key) => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch (e) {
+      console.warn("localStorage access denied for removeItem", e);
+    }
+    memoryStorage.removeItem(key);
+  }
+};
+
+// We need localStorage for OAuth redirects to work correctly and persist the session
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storageKey: 'lalasweet-auth-token',
-      storage: memoryStorage,
-      persistSession: false,
-      autoRefreshToken: false,
+      storage: safeStorage,
+      persistSession: true,
+      autoRefreshToken: true,
       detectSessionInUrl: true,
       multiTab: false,
     },
@@ -307,4 +337,65 @@ export const saveAgentLog = async (logData, userId, username) => {
 export const clearAgentLogs = async () => {
   if (!supabase) return;
   await supabase.from('agent_logs').delete().neq('ts', 0);
+};
+
+// ====== Organization OKR (global, single-blob) ======
+
+export const getOrgOkr = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('org_okr')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error || !data?.length) return null;
+  return data[0];
+};
+
+export const saveOrgOkr = async (content) => {
+  if (!supabase) throw new Error('Supabase not configured');
+  await supabase.from('org_okr').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  const { error } = await supabase.from('org_okr').insert({
+    org_name: '전체',
+    content,
+    updated_at: new Date().toISOString()
+  });
+  if (error) throw new Error(error.message);
+  return true;
+};
+
+export const deleteOrgOkr = async () => {
+  if (!supabase) return;
+  await supabase.from('org_okr').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+};
+
+// ====== Organization BP (global, single-blob) ======
+
+export const getOrgBp = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('org_bp')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error || !data?.length) return null;
+  return data[0];
+};
+
+export const saveOrgBp = async (content) => {
+  if (!supabase) throw new Error('Supabase not configured');
+  await supabase.from('org_bp').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  const { error } = await supabase.from('org_bp').insert({
+    org_name: '전체',
+    role_name: '',
+    content,
+    updated_at: new Date().toISOString()
+  });
+  if (error) throw new Error(error.message);
+  return true;
+};
+
+export const deleteOrgBp = async () => {
+  if (!supabase) return;
+  await supabase.from('org_bp').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 };

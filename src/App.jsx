@@ -10,7 +10,7 @@ import Tutorial from "./components/ui/Tutorial";
 import { SYS, ML, AI_MODELS } from "./utils/constants";
 import { callAI, getAvailableModels } from "./services/aiService";
 import * as db from "./services/supabase";
-import { getWorkingStyle, saveWorkingStyle, deleteWorkingStyle } from "./services/supabase";
+import { getWorkingStyle, saveWorkingStyle, deleteWorkingStyle, getOrgOkr, saveOrgOkr, deleteOrgOkr, getOrgBp, saveOrgBp, deleteOrgBp } from "./services/supabase";
 
 window.showToast = (msg, type = "info") => {
   window.dispatchEvent(new CustomEvent("show-toast", { detail: { msg, type } }));
@@ -48,6 +48,7 @@ function App() {
   });
   const [view, _setView] = useState(() => {
     const hash = window.location.hash.replace("#", "");
+    if (hash.startsWith("access_token=") || hash.startsWith("error_description=")) return "home"; // Let Supabase handle auth hashes
     if (hash.startsWith("share-")) return "share";
     return hash || "home";
   });
@@ -69,6 +70,7 @@ function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace("#", "");
+      if (hash.startsWith("access_token=") || hash.startsWith("error_description=")) return; // Ignore Supabase OAuth hashes
       if (hash.startsWith("share-")) {
         setShareId(hash.replace("share-", ""));
         _setView("share");
@@ -76,38 +78,72 @@ function App() {
         _setView(hash || "home");
       }
     };
-    window.addEventListener("hashchange", handleHashChange);
-    if (!window.location.hash) window.location.hash = "home";
+    // Check hash manually on load in case localStorage is blocked completely (Comet Browser)
+    const initialHash = window.location.hash.replace("#", "");
+    console.log(`Hash detected: ${initialHash.substring(0, 50)}...`);
+    if (initialHash.includes("access_token=")) {
+      console.log("access_token found in hash, attempting manual session recovery");
+      const hashParams = new URLSearchParams(initialHash);
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+      console.log(`Token parsed: AT=${!!accessToken}, RT=${!!refreshToken}`);
+
+      if (accessToken && refreshToken) {
+        db.supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        }).then(async ({ data, error }) => {
+          if (error) {
+            console.log(`setSession ERROR: ${error.message}`);
+          } else if (data?.session?.user) {
+            console.log(`setSession OK: user=${data.session.user.email}`);
+            const syncedUser = await db.syncGoogleUser(data.session.user);
+            console.log(`syncGoogleUser result: ${syncedUser ? syncedUser.id : 'NULL'}`);
+            if (syncedUser) {
+              setUser(syncedUser);
+              try { localStorage.setItem("lalasweet_user", JSON.stringify(syncedUser)); } catch(e){}
+              window.location.hash = "home";
+            }
+          } else {
+            console.log(`setSession: no session/user in response`);
+          }
+        }).catch(err => {
+          console.log(`setSession CATCH: ${err.message}`);
+        });
+      }
+    } else if (!initialHash && !window.location.search.includes("code=")) {
+        window.location.hash = "home";
+    }
 
     // Listen for Supabase Auth changes (Google Login callback ONLY)
-    // We track whether the initial session has been processed to avoid
-    // treating session restoration as a new Google login.
-    let initialSessionHandled = false;
+    let googleLoginProcessed = false;
+    const isOAuthRedirect = window.location.hash.includes('access_token=');
+    console.log(`onAuthStateChange registered. isOAuth=${isOAuthRedirect}`);
     const authSub = db.supabase?.auth?.onAuthStateChange(async (event, session) => {
-      // Skip INITIAL_SESSION – this fires on page load with any existing session
-      if (event === 'INITIAL_SESSION') {
-        initialSessionHandled = true;
-        // If there's an error string in the URL hash, we might need to purge session but the SDK usually handles it.
+      console.log(`AUTH EVENT: ${event}, hasUser=${!!session?.user}, isOAuth=${isOAuthRedirect}, processed=${googleLoginProcessed}`);
+
+      // Handle Google OAuth: process ANY event that has a valid session during OAuth redirect
+      if (isOAuthRedirect && session?.user && !googleLoginProcessed) {
+        googleLoginProcessed = true;
+        console.log(`Processing OAuth from ${event}, email=${session.user.email}`);
+        try {
+          const syncedUser = await db.syncGoogleUser(session.user);
+          console.log(`syncGoogleUser: ${syncedUser ? 'OK id=' + syncedUser.id : 'FAILED/NULL'}`);
+          if (syncedUser) {
+            setUser(syncedUser);
+            try { localStorage.setItem("lalasweet_user", JSON.stringify(syncedUser)); } catch(e){}
+            window.location.hash = "home";
+          }
+        } catch(err) {
+          console.log(`syncGoogleUser ERROR: ${err.message}`);
+        }
         return;
       }
+
       if (event === 'SIGNED_OUT') {
-        // If the refresh token is invalid, Supabase logs out the user
+        window.__pushDebug('SIGNED_OUT handled');
         setUser(null);
-        localStorage.removeItem("lalasweet_user");
-      }
-      // Only handle actual Google OAuth sign-in events
-      // Skip if user is already logged in (regular login) or if there's no session
-      if (event === 'SIGNED_IN' && session?.user && !initialSessionHandled) {
-        // This is a fresh Google OAuth callback (redirect back to app)
-        const syncedUser = await db.syncGoogleUser(session.user);
-        if (syncedUser) {
-          setUser(syncedUser);
-          localStorage.setItem("lalasweet_user", JSON.stringify(syncedUser));
-        }
-      }
-      // After the first SIGNED_IN, mark as handled to prevent re-triggering
-      if (event === 'SIGNED_IN') {
-        initialSessionHandled = true;
+        try { localStorage.removeItem("lalasweet_user"); } catch(e){}
       }
     });
 
@@ -121,6 +157,8 @@ function App() {
   const [guide, setGuide] = useState(null);
   const [guideLoad, setGuideLoad] = useState(true);
   const [workingStyle, setWorkingStyle] = useState(null);
+  const [orgOkr, setOrgOkr] = useState(null);
+  const [orgBp, setOrgBp] = useState(null);
   const fileRef = useRef(null);
   const goalsPdfRef = useRef(null);
   const [err, setErr] = useState("");
@@ -188,6 +226,18 @@ function App() {
         if (ws) setWorkingStyle(ws);
       } catch (e) {
         console.error("WorkingStyle Load Error", e);
+      }
+      try {
+        const okrs = await getOrgOkr();
+        setOrgOkr(okrs);
+      } catch (e) {
+        console.error("OKR Load Error", e);
+      }
+      try {
+        const bps = await getOrgBp();
+        setOrgBp(bps);
+      } catch (e) {
+        console.error("BP Load Error", e);
       }
       setGuideLoad(false);
       await loadRooms();
@@ -310,12 +360,7 @@ function App() {
     } catch (e) { }
   };
 
-  const handleFile = async e => {
-    const f = e.target.files?.[0]; if (!f) return;
-    if (f.type !== "application/pdf") { setErr("PDF만 가능"); return; }
-    if (f.size > 4 * 1024 * 1024) { setErr("4MB 초과"); return; } setErr("");
-    const rd = new FileReader(); rd.onload = async () => { await saveGuideFlow(f.name, rd.result.split(",")[1]); }; rd.readAsDataURL(f);
-  };
+  const handleFile = null; // PDF upload removed, using text input now
 
   // Goals PDF
   const handleGoalsPdf = async e => {
@@ -392,21 +437,80 @@ function App() {
     } catch (e) { }
   };
 
+  // OKR flow (single-blob)
+  const saveOrgOkrFlow = async (content) => {
+    try {
+      await saveOrgOkr(content);
+      const data = await getOrgOkr();
+      setOrgOkr(data);
+      return true;
+    } catch (e) {
+      console.error("Save OKR error", e);
+      return false;
+    }
+  };
+
+  const deleteOrgOkrFlow = async () => {
+    try {
+      await deleteOrgOkr();
+      setOrgOkr(null);
+    } catch (e) {
+      console.error("Delete OKR error", e);
+    }
+  };
+
+  // BP flow (single-blob)
+  const saveOrgBpFlow = async (content) => {
+    try {
+      await saveOrgBp(content);
+      const data = await getOrgBp();
+      setOrgBp(data);
+      return true;
+    } catch (e) {
+      console.error("Save BP error", e);
+      return false;
+    }
+  };
+
+  const deleteOrgBpFlow = async () => {
+    try {
+      await deleteOrgBp();
+      setOrgBp(null);
+    } catch (e) {
+      console.error("Delete BP error", e);
+    }
+  };
+
   const callAPI = async (sys, txt, mid, info, additionalDocs = [], targetRoom = null) => {
     setLoading(true); setErr(""); setResult("");
     try {
       const docs = [];
-      if (guide?.data) {
-        docs.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: guide.data } });
-      }
+      // Guide: text injection only (no PDF attachment)
       for (const d of additionalDocs) docs.push(d);
 
-      const prefix = guide?.data ? "위 첫 번째 PDF는 레벨가이드" + (additionalDocs.length > 0 ? ", 두 번째 PDF는 조직목표 문서" : "") + ".\n\n" : "";
+      const prefix = additionalDocs.length > 0 ? "첨부된 PDF는 조직목표 문서입니다.\n\n" : "";
 
-      // Inject working style into system prompt for all modes
+      // Inject BP (Best Practice), OKR, Guide, and working style into system prompt
       let finalSys = sys;
+
+      // BP(Best Practice) — 최우선 적용: 잘 만들어진 이니셔티브 사례
+      if (orgBp?.content) {
+        finalSys += "\n\n[⭐ BP(Best Practice) — 최우선 참고 사례]\n아래는 조직에서 선호하는 양식으로 잘 만들어진 이니셔티브 사례입니다. 이 양식과 구조를 최우선으로 확인하고 적용하여 이니셔티브를 생성하세요.\n\n" + orgBp.content;
+      }
+
+      // OKR 참고
+      if (orgOkr?.content) {
+        finalSys += "\n\n[조직 OKR]\n" + orgOkr.content;
+      }
+
+      // 레벨 가이드 (text)
+      if (guide?.data) {
+        finalSys += "\n\n[레벨 가이드]\n" + guide.data;
+      }
+
+      // 일하는 방식
       if (workingStyle?.content) {
-        finalSys = sys + "\n\n[일하는 방식 문서]\n" + workingStyle.content;
+        finalSys += "\n\n[일하는 방식 문서]\n" + workingStyle.content;
       }
 
       const resText = await callAI(selectedModel, finalSys, prefix + txt, docs);
@@ -427,9 +531,7 @@ function App() {
 
     try {
       const docs = [];
-      if (guide?.data) {
-        docs.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: guide.data } });
-      }
+      // Guide is text-based now, injected via system prompt in callAPI
 
       let specText = "";
       if (spec !== "100%") {
@@ -596,7 +698,7 @@ function App() {
     if (modeId) content = <ModeView
       modeId={modeId} curRoom={curRoom} rooms={rooms} step={step} setStep={setStep} loading={loading} err={err} result={result}
       modTxt={modTxt} setModTxt={setModTxt} handleModify={handleModify} startMode={startMode} goHome={goHome} goRoom={goRoom}
-      guide={guide}
+      guide={guide} orgOkr={orgOkr}
       f1={f1} setF1={setF1} hasExisting={hasExisting} setHasExisting={setHasExisting} existingInit={existingInit} setExistingInit={setExistingInit} applyDirect={applyDirect}
       noOkr={noOkr} setNoOkr={setNoOkr} okr={okr} setOkr={setOkr} checkGoals={checkGoals}
       goalsMode={goalsMode} setGoalsMode={setGoalsMode} goalsChecked={goalsChecked} savedGoals={savedGoals} goals={goals} setGoals={setGoals}
@@ -611,11 +713,13 @@ function App() {
   } else if (view === "admin") {
     content = <AdminView
       adminAuth={adminAuth} setAdminAuth={setAdminAuth} apw={apw} setApw={setApw} pwErr={pwErr} setPwErr={setPwErr} loadLogs={loadLogsFlow}
-      guide={guide} fileRef={fileRef} deleteGuide={deleteGuideFlow} handleFile={handleFile} err={err}
+      guide={guide} fileRef={fileRef} deleteGuide={deleteGuideFlow} handleFile={handleFile} err={err} saveGuide={saveGuideFlow}
       adminTab={adminTab} setAdminTab={setAdminTab} logsLoad={logsLoad} logs={logs} logDetail={logDetail} setLogDetail={setLogDetail}
       logFilter={logFilter} setLogFilter={setLogFilter} clearLogs={clearLogsFlow} goHome={goHome}
       user={user}
       workingStyle={workingStyle} saveWorkingStyle={saveWorkingStyleFlow} deleteWorkingStyle={deleteWorkingStyleFlow}
+      orgOkr={orgOkr} saveOrgOkr={saveOrgOkrFlow} deleteOrgOkr={deleteOrgOkrFlow}
+      orgBp={orgBp} saveOrgBp={saveOrgBpFlow} deleteOrgBp={deleteOrgBpFlow}
     />;
   }
 

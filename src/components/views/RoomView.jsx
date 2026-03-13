@@ -17,7 +17,7 @@ export default function RoomView({ curRoom, goHome, startMode, unpinInitiative }
                 {curRoom.role && <span style={{ background: C.g100, color: C.g600, fontSize: 11, padding: "4px 10px", borderRadius: 6 }}>{curRoom.role}</span>}
             </div>
 
-            <div style={{ fontSize: 11, color: C.g400, marginBottom: 16 }}>마지막 수정: {new Date(curRoom.updatedAt).toLocaleString("ko-KR")}</div>
+            <div style={{ fontSize: 11, color: C.g400, marginBottom: 16 }}>마지막 수정: {new Date(curRoom.updated_at).toLocaleString("ko-KR")}</div>
 
             <TutorialTip
                 id="tut_room_modes"
@@ -73,7 +73,17 @@ export default function RoomView({ curRoom, goHome, startMode, unpinInitiative }
                                     <div style={{ fontSize: 11, color: C.g400, marginTop: 4 }}>{new Date(h.ts).toLocaleString("ko-KR")}</div>
                                 </div>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(h.result); window.showToast("클립보드에 복사되었습니다."); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${C.g200}`, background: C.w, color: C.p, fontSize: 11, cursor: "pointer", fontWeight: 700 }}>📋 복사</button>
+                                    <button onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!h.id) {
+                                            window.showToast("새로고침 후 공유할 수 있습니다.", "error");
+                                            return;
+                                        }
+                                        const url = `${window.location.origin}/#share-${h.id}`;
+                                        navigator.clipboard.writeText(url);
+                                        window.showToast("공유 링크가 복사되었습니다.");
+                                    }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${C.g200}`, background: C.pl, color: C.p, fontSize: 11, cursor: "pointer", fontWeight: 700 }}>🔗 공유</button>
+                                    <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(h.result); window.showToast("클립보드에 복사되었습니다."); }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${C.g200}`, background: C.w, color: C.g600, fontSize: 11, cursor: "pointer", fontWeight: 700 }}>📋 복사</button>
                                     <button onClick={() => setExpandIdx(expandIdx === i ? null : i)} style={{ background: "none", border: "none", color: C.g400, fontSize: 12, cursor: "pointer" }}>{expandIdx === i ? "▲" : "▼"}</button>
                                 </div>
                             </div>
