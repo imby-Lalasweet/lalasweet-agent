@@ -63,7 +63,9 @@ export default function AdminView({
     };
 
     // ──── helper: 텍스트 저장 탭 UI ────
-    const TextTab = ({ icon, title, desc, hint, hintColor, placeholder, text, setText, saving, msg, setMsg, onSave, onDelete, existing, updatedAt, accordionInfo }) => (
+    const TextTab = ({ icon, title, desc, hint, hintColor, placeholder, text, setText, saving, msg, setMsg, onSave, onDelete, existing, updatedAt, accordionInfo }) => {
+        const [isOpen, setIsOpen] = useState(false);
+        return (
         <div>
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -110,33 +112,39 @@ export default function AdminView({
             {msg && <div style={{ textAlign: 'center', color: C.green, fontSize: 12, marginTop: 10, fontWeight: 600 }}>{msg}</div>}
 
             {accordionInfo && (
-                <details style={{ marginTop: 24, background: C.g50, borderRadius: 12, overflow: 'hidden' }}>
-                    <summary style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: C.g700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', listStyle: 'none' }}>
+                <div style={{ marginTop: 24, background: C.g50, borderRadius: 12, overflow: 'hidden' }}>
+                    <button 
+                        onClick={() => setIsOpen(!isOpen)}
+                        style={{ width: '100%', padding: '14px 16px', fontSize: 13, fontWeight: 700, color: C.g700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', border: 'none', textAlign: 'left' }}
+                    >
                         <span>💡 이 내용은 AI에 어떻게 반영되나요?</span>
-                        <span style={{ fontSize: 12 }}>▼</span>
-                    </summary>
-                    <div style={{ padding: '0 16px 16px 16px', fontSize: 13, color: C.g600, lineHeight: 1.6 }}>
-                        <div style={{ padding: '12px 14px', background: C.w, borderRadius: 8, border: `1px solid ${C.g200}` }}>
-                            <div style={{ fontWeight: 700, color: C.p, marginBottom: 8, fontSize: 12 }}>적용 순위: {accordionInfo.rank} / 6</div>
-                            <div style={{ marginBottom: 10, whiteSpace: 'pre-line' }}>{accordionInfo.desc}</div>
-                            {accordionInfo.table && (
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 8 }}>
-                                    <tbody>
-                                        {accordionInfo.table.map((row, idx) => (
-                                            <tr key={idx} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${C.g100}` }}>
-                                                <td style={{ padding: '8px', fontWeight: 600, color: C.g700, width: '30%', verticalAlign: 'top' }}>{row.label}</td>
-                                                <td style={{ padding: '8px', color: C.g600 }}>{row.value}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
+                        <span style={{ fontSize: 12, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+                    </button>
+                    {isOpen && (
+                        <div style={{ padding: '0 16px 16px 16px', fontSize: 13, color: C.g600, lineHeight: 1.6 }}>
+                            <div style={{ padding: '12px 14px', background: C.w, borderRadius: 8, border: `1px solid ${C.g200}` }}>
+                                <div style={{ fontWeight: 700, color: C.p, marginBottom: 8, fontSize: 12 }}>적용 순위: {accordionInfo.rank} / 6</div>
+                                <div style={{ marginBottom: 10, whiteSpace: 'pre-line' }}>{accordionInfo.desc}</div>
+                                {accordionInfo.table && (
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 8 }}>
+                                        <tbody>
+                                            {accordionInfo.table.map((row, idx) => (
+                                                <tr key={idx} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${C.g100}` }}>
+                                                    <td style={{ padding: '8px', fontWeight: 600, color: C.g700, width: '30%', verticalAlign: 'top' }}>{row.label}</td>
+                                                    <td style={{ padding: '8px', color: C.g600 }}>{row.value}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                </details>
+                    )}
+                </div>
             )}
         </div>
     );
+    };
 
     if (!adminAuth) {
         return (
