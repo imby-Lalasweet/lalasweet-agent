@@ -63,7 +63,7 @@ export default function AdminView({
     };
 
     // ──── helper: 텍스트 저장 탭 UI ────
-    const TextTab = ({ icon, title, desc, hint, hintColor, placeholder, text, setText, saving, msg, setMsg, onSave, onDelete, existing, updatedAt }) => (
+    const TextTab = ({ icon, title, desc, hint, hintColor, placeholder, text, setText, saving, msg, setMsg, onSave, onDelete, existing, updatedAt, accordionInfo }) => (
         <div>
             <div style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -108,6 +108,33 @@ export default function AdminView({
                 )}
             </div>
             {msg && <div style={{ textAlign: 'center', color: C.green, fontSize: 12, marginTop: 10, fontWeight: 600 }}>{msg}</div>}
+
+            {accordionInfo && (
+                <details style={{ marginTop: 24, background: C.g50, borderRadius: 12, overflow: 'hidden' }}>
+                    <summary style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: C.g700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', listStyle: 'none' }}>
+                        <span>💡 이 내용은 AI에 어떻게 반영되나요?</span>
+                        <span style={{ fontSize: 12 }}>▼</span>
+                    </summary>
+                    <div style={{ padding: '0 16px 16px 16px', fontSize: 13, color: C.g600, lineHeight: 1.6 }}>
+                        <div style={{ padding: '12px 14px', background: C.w, borderRadius: 8, border: `1px solid ${C.g200}` }}>
+                            <div style={{ fontWeight: 700, color: C.p, marginBottom: 8, fontSize: 12 }}>적용 순위: {accordionInfo.rank} / 6</div>
+                            <div style={{ marginBottom: 10, whiteSpace: 'pre-line' }}>{accordionInfo.desc}</div>
+                            {accordionInfo.table && (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 8 }}>
+                                    <tbody>
+                                        {accordionInfo.table.map((row, idx) => (
+                                            <tr key={idx} style={{ borderTop: idx === 0 ? 'none' : `1px solid ${C.g100}` }}>
+                                                <td style={{ padding: '8px', fontWeight: 600, color: C.g700, width: '30%', verticalAlign: 'top' }}>{row.label}</td>
+                                                <td style={{ padding: '8px', color: C.g600 }}>{row.value}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </details>
+            )}
         </div>
     );
 
@@ -199,6 +226,14 @@ export default function AdminView({
                         setGuideText('');
                         setGuideMsg('🗑️ 삭제 완료');
                     }}
+                    accordionInfo={{
+                        rank: "5순위",
+                        desc: "구성원의 레벨(L1~L5)을 파악하여 행동의 '난이도'와 '구조화 수준'을 결정합니다. (예: L1은 '수행/기록', L4는 '구조화/방법론' 중심)",
+                        table: [
+                            { label: "직무별 가이드", value: "해당 내용에 특정 직무 가이드가 포함돼있다면 최우선으로 찾아서 반영합니다." },
+                            { label: "공통 수준 가이드", value: "유사 직무가 없으면 '공통 레벨 수준'을 참고하여 난이도를 맞춥니다." }
+                        ]
+                    }}
                 />
             )}
 
@@ -223,6 +258,14 @@ export default function AdminView({
                         await deleteOrgOkr();
                         setOkrText('');
                         setOkrMsg('🗑️ 삭제 완료');
+                    }}
+                    accordionInfo={{
+                        rank: "2순위",
+                        desc: "개인의 목표를 직접적으로 포괄하는 상위 이니셔티브를 도출하기 위한 핵심 뼈대입니다.",
+                        table: [
+                            { label: "반영 방법", value: "입력된 이름(예: [김철수])을 기반으로 자동 매칭하여 해당 구성원의 이니셔티브 생성 시 가장 강력한 내용 소스로 사용됩니다." },
+                            { label: "적용 효과", value: "구체적인 OKR이 있을수록 결과물이 부서/실무에 더욱 밀착되고 정밀한(Deep-dive) 행동 계획 리스트로 변화합니다." }
+                        ]
                     }}
                 />
             )}
@@ -249,6 +292,14 @@ export default function AdminView({
                         setWsText('');
                         setWsMsg('🗑️ 삭제 완료');
                     }}
+                    accordionInfo={{
+                        rank: "6순위",
+                        desc: "도출된 이니셔티브 행동에 7가지 제플린 핵심 가치(예: [가설사고], [문제정의]) 태그를 알맞게 맵핑하고, 가이드라인 멘트를 작성할 때 조언 기준으로 쓰입니다.",
+                        table: [
+                            { label: "핵심 역할", value: "행동의 명확한 '태도/도구 방향성'을 주기 위해 AI가 행동과 연관깊은 핵심 가치 태그를 자동으로 부여합니다." },
+                            { label: "과잉 부여 방지", value: "단순히 '목표를 세우는 행동'에 [목표설정] 태그를 습관적으로 달지 않고, 실제로 그 핵심 역량이 필요할 때만 선별 기입하게 되어 있습니다." }
+                        ]
+                    }}
                 />
             )}
 
@@ -274,6 +325,14 @@ export default function AdminView({
                         await deleteOrgBp();
                         setBpText('');
                         setBpMsg('🗑️ 삭제 완료');
+                    }}
+                    accordionInfo={{
+                        rank: "1순위 (최우선)",
+                        desc: "AI가 가장 먼저 읽고 '형식 제약'과 '문장 구조론'의 기준으로 삼는 절대적 템플릿입니다.",
+                        table: [
+                            { label: "복제 메커니즘", value: "이 곳에 입력된 (행동)-(기준)-(가이드) 형태와 정량적 수치 표현 방식을 AI가 거울처럼 그대로 따라하여 답변을 설계합니다." },
+                            { label: "직무 반영", value: "동일 팀/직무의 BP가 있으면 1차로 내용 로직까지 모방하며, 다른 직무여도 '좋은 사례의 작성법'으로서 모방합니다." }
+                        ]
                     }}
                 />
             )}
